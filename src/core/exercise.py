@@ -7,16 +7,19 @@ from ..factories.concrete_factories import QuestionGenerator
 from ..observers.exercise_observer import ExerciseObserver, ExerciseStatus
 from ..strategies.scoring_strategy import ScoringStrategy
 from ..strategies.concrete_strategies import AccuracyScoringStrategy
-
+import time
 
 class Exercise:
     def __init__(self, difficulty_level: str, number_range: tuple[int, int]):
+        self.difficulty_level = difficulty_level
+        self.number_range = number_range
         self.status = ExerciseStatus.NOT_STARTED
         self.questions: List[Question] = []
         self.answers: List[Answer] = []
         self.observers: List[ExerciseObserver] = []
         self.scoring_strategy: ScoringStrategy = AccuracyScoringStrategy()
         self.question_generator = QuestionGenerator(number_range)
+        self.last_answer_time = time.time()  # 添加这一行来跟踪上一次答题时间
 
     def add_observer(self, observer: ExerciseObserver):
         self.observers.append(observer)

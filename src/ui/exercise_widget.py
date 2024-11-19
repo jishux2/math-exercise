@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QTextEdit,
     QStatusBar,
+    QApplication,
 )
 from PySide6.QtCore import (
     Qt,
@@ -28,17 +29,28 @@ from PySide6.QtCore import (
     Property,
     QRect,
     QParallelAnimationGroup,
+    Signal,
+    QObject,
 )
 from PySide6.QtWidgets import QScroller, QScrollerProperties  # 新增导入
-from PySide6.QtGui import QColor, QPalette, QFont
+from PySide6.QtGui import QColor, QPalette, QFont, QTextCursor
 from ..core.exercise import Exercise
+from ..core.exercise_record import ExerciseRecord, QuestionRecord
 from ..models.question import OperatorType
 from ..observers.concrete_observers import Student
 from ..strategies.concrete_strategies import (
     TimedScoringStrategy,
     AccuracyScoringStrategy,
 )
+from .preview_window import PreviewWindow
+from poe_api_wrapper import PoeApi
 import time
+
+
+# 添加一个信号发射器类
+class FeedbackSignals(QObject):
+    append_text = Signal(str)
+    clear_text = Signal()
 
 
 class AnimatedProgressBar(QWidget):
@@ -492,6 +504,21 @@ class ExerciseWidget(QWidget):
         self.current_question_index = 0
         self.question_cards = []
         self.start_time = 0
+        self.preview_window = None  # 添加成员变量
+
+        # 初始化POE客户端
+        self.tokens = {
+            "p-b": "0dPL9p66HeK2FZUORwP8YQ%3D%3D",
+            "p-lat": "39WqZnPmcEx9IL82sNbiwQYl2Od0dGWnx%2F%2BnmxjBzQ%3D%3D",
+        }
+        self.poe_client = PoeApi(tokens=self.tokens, auto_proxy=True)
+        self.exercise_record = None
+
+        # 初始化信号
+        self.feedback_signals = FeedbackSignals()
+        self.feedback_signals.append_text.connect(self.append_feedback_text)
+        self.feedback_signals.clear_text.connect(self.clear_feedback_text)
+
         self.setupUI()
         self.initExercise()
 
@@ -570,9 +597,9 @@ class ExerciseWidget(QWidget):
         self.splitter.setChildrenCollapsible(False)
 
         # 上部分：题目区域
-        upper_container = QWidget()
-        upper_container.setMinimumHeight(400)  # 设置最小高度
-        upper_layout = QVBoxLayout(upper_container)
+        self.upper_container = QWidget()
+        self.upper_container.setMinimumHeight(400)  # 设置最小高度
+        upper_layout = QVBoxLayout(self.upper_container)
         upper_layout.setContentsMargins(0, 0, 0, 0)
         upper_layout.setSpacing(0)
 
@@ -624,30 +651,32 @@ class ExerciseWidget(QWidget):
         # 将滚动区域添加到上部分容器
         upper_layout.addWidget(self.scroll_area)
 
-        # 下部分：日志区域
-        self.log_container = QWidget()
-        self.log_container.setMinimumHeight(150)  # 设置最小高度
-        self.log_container.setMaximumHeight(200)  # 设置最大高度限制
-        log_layout = QVBoxLayout(self.log_container)
+        # 下部分：点评区域
+        self.feedback_container = QWidget()
+        self.feedback_container.setMinimumHeight(150)  # 设置最小高度
+        # self.feedback_container.setMaximumHeight(200)  # 设置最大高度限制
+        feedback_layout = QVBoxLayout(self.feedback_container)
 
-        # 为日志容器创建阴影效果
-        log_shadow = QGraphicsDropShadowEffect(self)
-        log_shadow.setBlurRadius(15)
-        log_shadow.setXOffset(0)
-        log_shadow.setYOffset(3)
-        log_shadow.setColor(QColor(0, 0, 0, 30))
-        self.log_container.setGraphicsEffect(log_shadow)
+        # 为点评容器创建阴影效果
+        feedback_shadow = QGraphicsDropShadowEffect(self)
+        feedback_shadow.setBlurRadius(15)
+        feedback_shadow.setXOffset(0)
+        feedback_shadow.setYOffset(3)
+        feedback_shadow.setColor(QColor(0, 0, 0, 30))
+        self.feedback_container.setGraphicsEffect(feedback_shadow)
 
-        # 日志标题栏
-        log_header = QWidget()
-        log_header_layout = QHBoxLayout(log_header)
-        log_header_layout.setContentsMargins(0, 0, 0, 0)
+        # 点评标题栏
+        feedback_header = QWidget()
+        feedback_header_layout = QHBoxLayout(feedback_header)
+        feedback_header_layout.setContentsMargins(0, 0, 0, 0)
 
-        log_label = QLabel("运行日志")
-        log_label.setStyleSheet("color: #666; font-weight: bold;")
-        self.stop_button = QPushButton("停止")
-        self.stop_button.setFixedSize(60, 24)
-        self.stop_button.setStyleSheet(
+        feedback_label = QLabel("AI点评")
+        feedback_label.setStyleSheet("color: #666; font-weight: bold;")
+        self.preview_button = QPushButton("预览点评")  # 改名
+        self.preview_button.setEnabled(False)  # 初始禁用
+        self.preview_button.clicked.connect(self.showPreview)
+        self.preview_button.setFixedSize(60, 24)
+        self.preview_button.setStyleSheet(
             """
             QPushButton {
                 background: #f44336;
@@ -664,14 +693,14 @@ class ExerciseWidget(QWidget):
         """
         )
 
-        log_header_layout.addWidget(log_label)
-        log_header_layout.addStretch()
-        log_header_layout.addWidget(self.stop_button)
+        feedback_header_layout.addWidget(feedback_label)
+        feedback_header_layout.addStretch()
+        feedback_header_layout.addWidget(self.preview_button)
 
-        # 日志文本区域
-        self.log_text = QTextEdit()
-        self.log_text.setReadOnly(True)
-        self.log_text.setStyleSheet(
+        # 点评文本区域
+        self.feedback_text = QTextEdit()
+        self.feedback_text.setReadOnly(True)
+        self.feedback_text.setStyleSheet(
             """
             QTextEdit {
                 background: #f8f9fa;
@@ -684,12 +713,12 @@ class ExerciseWidget(QWidget):
         """
         )
 
-        log_layout.addWidget(log_header)
-        log_layout.addWidget(self.log_text)
+        feedback_layout.addWidget(feedback_header)
+        feedback_layout.addWidget(self.feedback_text)
 
         # 将上下部分添加到分割器
-        self.splitter.addWidget(upper_container)
-        self.splitter.addWidget(self.log_container)
+        self.splitter.addWidget(self.upper_container)
+        self.splitter.addWidget(self.feedback_container)
 
         # 设置分割器的伸缩因子
         self.splitter.setStretchFactor(0, 3)
@@ -794,9 +823,11 @@ class ExerciseWidget(QWidget):
             QMessageBox.warning(self, "输入错误", "请输入有效的数字！")
             return
 
-        # 计算耗时
+        # 计算本题耗时
         current_time = time.time()
-        time_spent = int(current_time - self.start_time)
+        time_spent = int(current_time - self.exercise.last_answer_time)
+        # 更新最后答题时间
+        self.exercise.last_answer_time = current_time
 
         # 提交答案并显示结果
         is_correct = self.exercise.submit_answer(question_index, answer, time_spent)
@@ -808,6 +839,16 @@ class ExerciseWidget(QWidget):
         progress = (question_index + 1) / len(self.exercise.questions) * 100
         self.progress_bar.setValue(progress)
 
+        # 记录答题信息
+        question_record = QuestionRecord(
+            content=self.exercise.questions[question_index].content,
+            user_answer=answer,
+            correct_answer=self.exercise.questions[question_index].answer,
+            is_correct=is_correct,
+            time_spent=time_spent,
+        )
+        self.exercise_record.add_question_record(question_record)
+
         # 如果还有下一题，添加新卡片
         if question_index + 1 < len(self.exercise.questions):
             self.addQuestionCard(self.exercise.questions[question_index + 1].content)
@@ -817,13 +858,72 @@ class ExerciseWidget(QWidget):
         else:
             # 练习完成
             final_score = self.exercise.submit_exercise()
+            self.exercise_record.total_time = time_spent
+            self.exercise_record.final_score = final_score
+
+            # 显示简短提示
             QMessageBox.information(
                 self,
                 "练习完成",
-                f"太棒了！你的最终得分是：{final_score}分\n"
-                f"用时：{self.formatTime(time_spent)}",
+                f"练习已完成！\n最终得分：{final_score}分\n"
+                f"用时：{self.formatTime(time_spent)}\n\n"
+                f"正在生成AI点评...",
             )
-            self.resetExercise()
+
+            self.upper_container.setMinimumHeight(0)  # 取消最小高度
+
+            # 开始获取AI反馈
+            self.getFeedback()
+
+    def append_feedback_text(self, text: str):
+        """在主线程中添加文本"""
+        cursor = self.feedback_text.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        cursor.insertText(text)
+        self.feedback_text.setTextCursor(cursor)
+
+    def clear_feedback_text(self):
+        """在主线程中清除文本"""
+        self.feedback_text.clear()
+
+    def showPreview(self):
+        """显示预览窗口"""
+        text = self.feedback_text.toPlainText()
+        if text:
+            if self.preview_window is None:
+                self.preview_window = PreviewWindow(text)
+            else:
+                self.preview_window.close()
+                self.preview_window = PreviewWindow(text)
+            self.preview_window.show()
+
+    def getFeedback(self):
+        """获取AI反馈"""
+        self.feedback_signals.clear_text.emit()
+        self.feedback_signals.append_text.emit("正在生成评语，请稍候...")
+        self.preview_button.setEnabled(False)  # 禁用预览按钮
+
+        # 创建新线程发送消息
+        from threading import Thread
+
+        def send_message():
+            try:
+                message = self.exercise_record.to_prompt_message()
+                self.feedback_signals.clear_text.emit()
+
+                # 流式输出AI回复
+                for chunk in self.poe_client.send_message("chinchilla", message):
+                    # 使用信号在主线程中更新UI
+                    self.feedback_signals.append_text.emit(chunk["response"])
+
+                # 生成完成后启用预览按钮
+                self.preview_button.setEnabled(True)
+
+            except Exception as e:
+                self.feedback_signals.append_text.emit(f"\n获取AI反馈失败：{str(e)}")
+                self.preview_button.setEnabled(False)
+
+        Thread(target=send_message, daemon=True).start()
 
     def updateTimer(self):
         if self.current_question_index < len(self.exercise.questions):
@@ -851,7 +951,14 @@ class ExerciseWidget(QWidget):
         # 初始化练习
         self.exercise = Exercise("简单", (1, 100))
         self.exercise.add_observer(Student("测试用户"))
-        self.exercise.set_scoring_strategy(TimedScoringStrategy())
+        self.exercise.set_scoring_strategy(AccuracyScoringStrategy())
+
+        # 初始化练习记录
+        self.exercise_record = ExerciseRecord(
+            difficulty="简单",
+            number_range=(1, 100),
+            operator_types=["加法", "减法"],
+        )
 
         # 生成题目
         self.exercise.generate_questions(
