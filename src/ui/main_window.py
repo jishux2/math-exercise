@@ -5,7 +5,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("数学练习系统")
-        self.resize(800, 600)
+        self.resize(1000, 600)
         
         # 创建中央窗口
         central_widget = QWidget()
