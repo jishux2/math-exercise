@@ -64,3 +64,7 @@ coverage.xml
 *.xlsx
 *.csv
 test_results/
+
+temp.*
+
+poe_api_wrapper/
