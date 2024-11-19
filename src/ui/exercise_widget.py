@@ -43,14 +43,16 @@ from ..strategies.concrete_strategies import (
     AccuracyScoringStrategy,
 )
 from .preview_window import PreviewWindow
+from .AI_setting_dialog import AISettingsDialog
 from poe_api_wrapper import PoeApi
 import time
 
 
-# 添加一个信号发射器类
-class FeedbackSignals(QObject):
-    append_text = Signal(str)
-    clear_text = Signal()
+class UIUpdateSignals(QObject):
+    client_init_success = Signal(object)  # 传递初始化后的client对象
+    client_init_failure = Signal(str)  # 传递错误信息
+    append_text = Signal(str)  # 用于更新文本
+    clear_text = Signal()  # 用于清除文本
 
 
 class AnimatedProgressBar(QWidget):
@@ -505,19 +507,16 @@ class ExerciseWidget(QWidget):
         self.question_cards = []
         self.start_time = 0
         self.preview_window = None  # 添加成员变量
-
-        # 初始化POE客户端
-        self.tokens = {
-            "p-b": "0dPL9p66HeK2FZUORwP8YQ%3D%3D",
-            "p-lat": "39WqZnPmcEx9IL82sNbiwQYl2Od0dGWnx%2F%2BnmxjBzQ%3D%3D",
-        }
-        self.poe_client = PoeApi(tokens=self.tokens, auto_proxy=True)
+        self.poe_client = None  # 初始化为None
         self.exercise_record = None
+        self.ignore_ai_toggle = False  # 添加这个标志
 
         # 初始化信号
-        self.feedback_signals = FeedbackSignals()
-        self.feedback_signals.append_text.connect(self.append_feedback_text)
-        self.feedback_signals.clear_text.connect(self.clear_feedback_text)
+        self.ui_signals = UIUpdateSignals()
+        self.ui_signals.client_init_success.connect(self.onClientInitSuccess)
+        self.ui_signals.client_init_failure.connect(self.onClientInitFailure)
+        self.ui_signals.append_text.connect(self.appendFeedbackText)
+        self.ui_signals.clear_text.connect(self.clearFeedbackText)
 
         self.setupUI()
         self.initExercise()
@@ -672,29 +671,92 @@ class ExerciseWidget(QWidget):
 
         feedback_label = QLabel("AI点评")
         feedback_label.setStyleSheet("color: #666; font-weight: bold;")
-        self.preview_button = QPushButton("预览点评")  # 改名
-        self.preview_button.setEnabled(False)  # 初始禁用
-        self.preview_button.clicked.connect(self.showPreview)
-        self.preview_button.setFixedSize(60, 24)
-        self.preview_button.setStyleSheet(
+
+        # 添加AI点评开关
+        self.ai_toggle = QPushButton("启用AI点评")
+        self.ai_toggle.setCheckable(True)  # 使按钮可切换
+        self.ai_toggle.setFixedSize(90, 24)
+        self.ai_toggle.setStyleSheet(
             """
             QPushButton {
-                background: #f44336;
+                background: #e0e0e0;
+                color: #666;
+                border: none;
+                border-radius: 12px;
+                padding: 0 10px;
+                text-align: center;
+            }
+            QPushButton:checked {
+                background: #4CAF50;
+                color: white;
+            }
+            QPushButton:hover {
+                background: #BDBDBD;
+            }
+            QPushButton:checked:hover {
+                background: #45a049;
+            }
+            QPushButton:disabled {
+                background: #e0e0e0;
+            }
+        """
+        )
+        self.ai_toggle.toggled.connect(self.onAIToggled)
+
+        # 添加设置按钮
+        self.settings_button = QPushButton("设置")
+        self.settings_button.setEnabled(False)
+        self.settings_button.setFixedSize(50, 24)
+        self.settings_button.clicked.connect(self.showSettingsDialog)
+        self.settings_button.setStyleSheet(
+            """
+            QPushButton {
+                background: #2196F3;
                 color: white;
                 border: none;
                 border-radius: 3px;
             }
             QPushButton:hover {
-                background: #e53935;
+                background: #1976D2;
             }
             QPushButton:pressed {
-                background: #d32f2f;
+                background: #1565C0;
+            }
+            QPushButton:disabled {
+                background: #BDBDBD;
+            }
+        """
+        )
+
+        # 修改预览按钮样式
+        self.preview_button = QPushButton("预览")
+        self.preview_button.setEnabled(False)
+        self.preview_button.setFixedSize(50, 24)
+        self.preview_button.clicked.connect(self.showPreview)
+        self.preview_button.setStyleSheet(
+            """
+            QPushButton {
+                background: #FF9800;
+                color: white;
+                border: none;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background: #F57C00;
+            }
+            QPushButton:pressed {
+                background: #EF6C00;
+            }
+            QPushButton:disabled {
+                background: #BDBDBD;
             }
         """
         )
 
         feedback_header_layout.addWidget(feedback_label)
         feedback_header_layout.addStretch()
+        feedback_header_layout.addWidget(self.ai_toggle)
+        feedback_header_layout.addWidget(self.settings_button)
         feedback_header_layout.addWidget(self.preview_button)
 
         # 点评文本区域
@@ -861,30 +923,107 @@ class ExerciseWidget(QWidget):
             self.exercise_record.total_time = time_spent
             self.exercise_record.final_score = final_score
 
-            # 显示简短提示
-            QMessageBox.information(
-                self,
-                "练习完成",
-                f"练习已完成！\n最终得分：{final_score}分\n"
-                f"用时：{self.formatTime(time_spent)}\n\n"
-                f"正在生成AI点评...",
+            completion_msg = (
+                f"练习已完成！\n"
+                f"最终得分：{final_score}分\n"
+                f"用时：{self.formatTime(time_spent)}"
             )
+
+            # 如果启用了AI点评
+            if self.ai_toggle.isChecked() and self.poe_client is not None:
+                completion_msg += "\n\n正在生成AI点评..."
+
+            QMessageBox.information(self, "练习完成", completion_msg)
 
             self.upper_container.setMinimumHeight(0)  # 取消最小高度
 
-            # 开始获取AI反馈
-            self.getFeedback()
+            # 仅在启用AI点评且客户端存在时获取反馈
+            if self.ai_toggle.isChecked() and self.poe_client is not None:
+                self.getFeedback()
 
-    def append_feedback_text(self, text: str):
-        """在主线程中添加文本"""
+    def onClientInitSuccess(self, client):
+        """客户端初始化成功的处理"""
+        self.poe_client = client
+        self.feedback_text.append("AI点评客户端初始化成功！")
+        self.settings_button.setEnabled(True)
+        self.ai_toggle.setEnabled(True)
+
+    def onClientInitFailure(self, error_msg):
+        """客户端初始化失败的处理"""
+        self.feedback_text.append(f"初始化失败：{error_msg}")
+        self.settings_button.setEnabled(True)
+        self.ai_toggle.setEnabled(True)
+        self.disableAI()
+        self.ai_toggle.setChecked(False)
+
+    def appendFeedbackText(self, text: str):
+        """在主线程中添加反馈文本"""
         cursor = self.feedback_text.textCursor()
         cursor.movePosition(QTextCursor.End)
         cursor.insertText(text)
         self.feedback_text.setTextCursor(cursor)
 
-    def clear_feedback_text(self):
-        """在主线程中清除文本"""
+    def clearFeedbackText(self):
+        """清除反馈文本"""
         self.feedback_text.clear()
+
+    def onAIToggled(self, checked: bool):
+        """处理AI点评开关状态改变"""
+        if self.ignore_ai_toggle:  # 如果标志为True，不执行切换操作
+            return
+    
+        self.settings_button.setEnabled(checked)
+        if not checked:
+            self.disableAI()
+        else:
+            self.ai_toggle.setText("关闭AI点评")
+            self.ui_signals.clear_text.emit()
+            self.feedback_text.setPlaceholderText(
+                "AI点评功能已启用，请先在设置中配置token"
+            )
+
+    def disableAI(self):
+        """禁用AI相关功能"""
+        self.poe_client = None
+        self.ai_toggle.setText("启用AI点评")
+        self.feedback_text.clear()
+        self.feedback_text.setPlaceholderText("")
+        self.preview_button.setEnabled(False)
+
+    def showSettingsDialog(self):
+        """显示设置对话框"""
+        dialog = AISettingsDialog(self)
+        if dialog.exec():
+            # 获取输入的token
+            pb = dialog.pb_input.text()
+            plat = dialog.plat_input.text()
+
+            # 清空反馈文本并显示初始化消息
+            self.ui_signals.clear_text.emit()
+            self.ui_signals.append_text.emit("正在初始化AI点评客户端...")
+
+            # 禁用相关按钮
+            self.settings_button.setEnabled(False)
+            self.ai_toggle.setEnabled(False)
+
+            # 在子线程中初始化客户端
+            from threading import Thread
+
+            def init_client():
+                try:
+                    tokens = {
+                        "p-b": pb,
+                        "p-lat": plat,
+                    }
+
+                    client = PoeApi(tokens=tokens, auto_proxy=True)
+                    self.ui_signals.client_init_success.emit(client)
+
+                except Exception as e:
+                    self.ui_signals.client_init_failure.emit(str(e))
+
+            # 启动初始化线程
+            Thread(target=init_client, daemon=True).start()
 
     def showPreview(self):
         """显示预览窗口"""
@@ -899,9 +1038,14 @@ class ExerciseWidget(QWidget):
 
     def getFeedback(self):
         """获取AI反馈"""
-        self.feedback_signals.clear_text.emit()
-        self.feedback_signals.append_text.emit("正在生成评语，请稍候...")
+        self.ui_signals.clear_text.emit()
+        self.ui_signals.append_text.emit("正在生成评语，请稍候...")
+        self.settings_button.setEnabled(False)  # 禁用预览按钮
         self.preview_button.setEnabled(False)  # 禁用预览按钮
+
+        # 禁用AI开关按钮
+        self.ignore_ai_toggle = True  # 设置标志
+        self.ai_toggle.setEnabled(False)
 
         # 创建新线程发送消息
         from threading import Thread
@@ -909,19 +1053,35 @@ class ExerciseWidget(QWidget):
         def send_message():
             try:
                 message = self.exercise_record.to_prompt_message()
-                self.feedback_signals.clear_text.emit()
+                first_chunk = True  # 添加标志来标记第一个响应块
 
                 # 流式输出AI回复
                 for chunk in self.poe_client.send_message("chinchilla", message):
+                    if first_chunk:  # 只在第一个响应块到达时清除文本
+                        self.ui_signals.clear_text.emit()
+                        first_chunk = False
                     # 使用信号在主线程中更新UI
-                    self.feedback_signals.append_text.emit(chunk["response"])
+                    self.ui_signals.append_text.emit(chunk["response"])
 
-                # 生成完成后启用预览按钮
-                self.preview_button.setEnabled(True)
+                # 在主线程中启用相关按钮
+                def enable_buttons():
+                    self.settings_button.setEnabled(True)
+                    self.preview_button.setEnabled(True)
+                    self.ai_toggle.setEnabled(True)
+                    self.ignore_ai_toggle = False  # 重置标志
+                
+                enable_buttons()
 
             except Exception as e:
-                self.feedback_signals.append_text.emit(f"\n获取AI反馈失败：{str(e)}")
-                self.preview_button.setEnabled(False)
+                def handle_error():
+                    self.ui_signals.clear_text.emit()
+                    self.ui_signals.append_text.emit(f"\n获取AI反馈失败：{str(e)}")
+                    self.settings_button.setEnabled(True)
+                    self.preview_button.setEnabled(False)
+                    self.ai_toggle.setEnabled(True)
+                    self.ignore_ai_toggle = False  # 重置标志
+                
+                handle_error()
 
         Thread(target=send_message, daemon=True).start()
 
