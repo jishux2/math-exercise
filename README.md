@@ -10,6 +10,7 @@
 - 观察者模式实现练习状态通知
 - 工厂模式实现题目生成
 - 策略模式实现灵活的评分机制
+- 可选的AI点评功能（需要额外安装poe_api_wrapper包）
 
 ## 安装
 
@@ -31,3 +32,37 @@
    ```bash
    pip install -r requirements.txt
    ```
+
+## 项目结构
+
+```
+math_exercise/
+│
+├── src/                    # 源代码目录
+│   ├── models/            # 数据模型
+│   ├── factories/         # 工厂模式实现
+│   ├── strategies/        # 策略模式实现
+│   ├── observers/         # 观察者模式实现
+│   ├── core/             # 核心功能实现
+│   └── ui/               # 用户界面实现
+│
+├── examples/              # 示例代码
+│   ├── main.py           # 命令行版本
+│   └── main_gui.py       # 图形界面版本
+│
+├── screenshots/           # 界面截图
+├── requirements.txt       # 项目依赖
+└── README.md             # 项目说明
+```
+
+## 运行方式
+
+### 图形界面版本
+```bash
+python -m examples.main_gui
+```
+
+### 命令行版本
+```bash
+python -m examples.main
+```
