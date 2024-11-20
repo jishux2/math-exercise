@@ -1,46 +1,77 @@
-import random
+# src/factories/concrete_factories.py
+
+from typing import List
+from collections import deque
+from ..models.question import Question, OperatorType, DifficultyLevel
 from .question_factory import QuestionFactory
-from ..models.question import Question, OperatorType
+from ..models.arithmetic_tree import ArithmeticNode
 
-class AdditionQuestionFactory(QuestionFactory):
-    def create_question(self) -> Question:
-        num1, num2 = self._generate_numbers()
-        answer = num1 + num2
-        content = f"{num1} + {num2} = ?"
-        return Question(content, answer, OperatorType.ADDITION)
 
-class SubtractionQuestionFactory(QuestionFactory):
+class ArithmeticQuestionFactory(QuestionFactory):
     def create_question(self) -> Question:
-        num1, num2 = self._generate_numbers()
-        # 确保结果为正数
-        num1, num2 = max(num1, num2), min(num1, num2)
-        answer = num1 - num2
-        content = f"{num1} - {num2} = ?"
-        return Question(content, answer, OperatorType.SUBTRACTION)
+        operand_count = self._get_operand_count()
 
-class MultiplicationQuestionFactory(QuestionFactory):
-    def create_question(self) -> Question:
-        num1, num2 = self._generate_numbers()
-        answer = num1 * num2
-        content = f"{num1} × {num2} = ?"
-        return Question(content, answer, OperatorType.MULTIPLICATION)
+        # 初始节点的结果使用加权随机
+        initial_operator = self._get_random_operator()
+        initial_result = self._get_weighted_result(initial_operator)
 
-class DivisionQuestionFactory(QuestionFactory):
-    def create_question(self) -> Question:
-        num2 = random.randint(1, self.max_num)  # 除数不能为0
-        answer = random.randint(1, self.max_num)
-        num1 = num2 * answer  # 确保能整除
-        content = f"{num1} ÷ {num2} = ?"
-        return Question(content, float(answer), OperatorType.DIVISION)
+        self.tree.root = ArithmeticNode(
+            operand=initial_result, operator=initial_operator
+        )
+
+        count = 1
+        queue = deque([self.tree.root])
+        operators = []  # 记录使用的运算符
+
+        while count < operand_count:
+            current_node = queue[0]
+            operator = current_node.operator
+            operand = current_node.operand
+
+            left_node = ArithmeticNode(0)
+            right_node = ArithmeticNode(0)
+            left_node.operator = self._get_random_operator()
+            right_node.operator = self._get_random_operator()
+
+            # 根据不同运算符生成合适的操作数
+            left_num, right_num = self._generate_operands(operator, operand)
+
+            if left_num is None or right_num is None:
+                # 如果生成失败，重新选择运算符
+                current_node.operator = self._get_random_operator()
+                continue
+
+            queue.popleft()
+            operators.append(operator)  # 记录运算符
+
+            left_node.operand = left_num
+            right_node.operand = right_num
+            current_node.set_left_node(left_node)
+            current_node.set_right_node(right_node)
+
+            queue.extend([left_node, right_node])
+            count += 1
+
+        arithmetic = self.tree.get_arithmetic()
+        # 使用更安全的方式计算结果
+        result = self._calculate_result(arithmetic)
+        return Question(content=arithmetic, answer=result, operator_types=operators)
+
+    def _calculate_result(self, expression: str) -> float:
+        """安全地计算表达式结果"""
+        # 这里应该实现一个安全的表达式求值器
+        # 暂时使用eval，实际应用中应该替换为更安全的实现
+        return eval(expression.replace("÷", "/"))
+
 
 class QuestionGenerator:
-    def __init__(self, number_range: tuple[int, int]):
-        self.factories = {
-            OperatorType.ADDITION: AdditionQuestionFactory(number_range),
-            OperatorType.SUBTRACTION: SubtractionQuestionFactory(number_range),
-            OperatorType.MULTIPLICATION: MultiplicationQuestionFactory(number_range),
-            OperatorType.DIVISION: DivisionQuestionFactory(number_range)
-        }
-    
-    def generate_question(self, operator_type: OperatorType) -> Question:
-        return self.factories[operator_type].create_question()
+    def __init__(
+        self,
+        difficulty: DifficultyLevel,
+        number_range: tuple[int, int],
+        operators: List[OperatorType],
+    ):
+        self.factory = ArithmeticQuestionFactory(difficulty, number_range, operators)
+
+    def generate_question(self) -> Question:
+        return self.factory.create_question()
