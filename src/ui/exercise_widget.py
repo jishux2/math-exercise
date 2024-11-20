@@ -45,9 +45,18 @@ from ..strategies.concrete_strategies import (
 )
 from .preview_window import PreviewWindow
 from .AI_setting_dialog import AISettingsDialog
-from poe_api_wrapper import PoeApi
 import time
 from threading import Thread, Event
+
+# 在文件开头添加一个标志变量
+HAS_POE_API = False
+
+try:
+    from poe_api_wrapper import PoeApi
+
+    HAS_POE_API = True
+except ImportError:
+    pass
 
 
 class UIUpdateSignals(QObject):
@@ -742,6 +751,11 @@ class ExerciseWidget(QWidget):
         )
         self.ai_toggle.toggled.connect(self.onAIToggled)
 
+        # 根据是否有poe_api_wrapper包来设置初始状态
+        if not HAS_POE_API:
+            self.ai_toggle.setEnabled(False)
+            self.ai_toggle.setToolTip("未安装poe_api_wrapper包，AI点评功能不可用")
+
         # 添加设置按钮
         self.settings_button = QPushButton("设置")
         self.settings_button.setEnabled(False)
@@ -802,6 +816,11 @@ class ExerciseWidget(QWidget):
         # 点评文本区域
         self.feedback_text = QTextEdit()
         self.feedback_text.setReadOnly(True)
+        if not HAS_POE_API:
+            self.feedback_text.setPlaceholderText(
+                "AI点评功能需要安装poe_api_wrapper包。\n"
+                "请联系管理员。\n"
+            )
         self.feedback_text.setStyleSheet(
             """
             QTextEdit {
@@ -928,13 +947,19 @@ class ExerciseWidget(QWidget):
         self.total_time = int(time.time() - self.start_time)
 
         # 提交答案并显示结果
-        is_correct = self.exercise.submit_answer(self.current_question_index, answer, time_spent)
+        is_correct = self.exercise.submit_answer(
+            self.current_question_index, answer, time_spent
+        )
 
-        card.showResult(is_correct, self.exercise.questions[self.current_question_index].answer)
+        card.showResult(
+            is_correct, self.exercise.questions[self.current_question_index].answer
+        )
         list_item.updateDisplay("正确" if is_correct else "错误")
 
         # 更新进度
-        progress = (self.current_question_index + 1) / len(self.exercise.questions) * 100
+        progress = (
+            (self.current_question_index + 1) / len(self.exercise.questions) * 100
+        )
         self.progress_bar.setValue(progress)
 
         # 记录答题信息
@@ -952,7 +977,9 @@ class ExerciseWidget(QWidget):
 
         # 如果还有下一题，添加新卡片
         if self.current_question_index < len(self.exercise.questions):
-            self.addQuestionCard(self.exercise.questions[self.current_question_index].content)
+            self.addQuestionCard(
+                self.exercise.questions[self.current_question_index].content
+            )
             next_list_item = self.question_list.item(self.current_question_index)
             next_list_item.updateDisplay("当前")
             self.question_list.setCurrentItem(next_list_item)
@@ -1007,6 +1034,9 @@ class ExerciseWidget(QWidget):
 
     def onAIToggled(self, checked: bool):
         """处理AI点评开关状态改变"""
+        if not HAS_POE_API:
+            return
+    
         if self.ignore_ai_toggle:  # 如果标志为True，不执行切换操作
             return
 
@@ -1074,6 +1104,9 @@ class ExerciseWidget(QWidget):
 
     def getFeedback(self):
         """获取AI反馈"""
+        if not HAS_POE_API:
+            return
+    
         self.ui_signals.clear_text.emit()
         self.ui_signals.append_text.emit("正在生成评语，请稍候...")
         self.settings_button.setEnabled(False)
@@ -1163,7 +1196,7 @@ class ExerciseWidget(QWidget):
 
         # 重置当前题目索引
         self.current_question_index = 0
-        
+
         # 重置布局
         while self.questions_container.count():
             item = self.questions_container.takeAt(0)
