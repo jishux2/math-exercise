@@ -1,5 +1,3 @@
-# src/factories/concrete_factories.py
-
 from typing import List
 from collections import deque
 from ..models.question import Question, OperatorType, DifficultyLevel

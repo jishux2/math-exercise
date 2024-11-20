@@ -1,7 +1,4 @@
-# src/factories/question_factory.py
-
 from abc import ABC, abstractmethod
-from collections import deque
 import random
 from typing import List, Tuple, Optional
 from ..models.question import Question, OperatorType, DifficultyLevel

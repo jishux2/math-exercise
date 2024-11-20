@@ -6,12 +6,20 @@ from ..models.answer import Answer
 from ..factories.concrete_factories import QuestionGenerator
 from ..observers.exercise_observer import ExerciseObserver, ExerciseStatus
 from ..strategies.scoring_strategy import ScoringStrategy
-from ..strategies.concrete_strategies import AccuracyScoringStrategy
+from ..strategies.concrete_strategies import (
+    AccuracyScoringStrategy,
+    TimedScoringStrategy,
+)
 import time
 
 
 class Exercise:
-    def __init__(self, difficulty: DifficultyLevel, number_range: tuple[int, int], operators: List[OperatorType]):
+    def __init__(
+        self,
+        difficulty: DifficultyLevel,
+        number_range: tuple[int, int],
+        operators: List[OperatorType],
+    ):
         self.difficulty = difficulty
         self.number_range = number_range
         self.status = ExerciseStatus.NOT_STARTED
@@ -62,14 +70,20 @@ class Exercise:
 
         return answer.is_correct
 
-    def submit_exercise(self):
+    def submit_exercise(self) -> float:
         if len(self.answers) != len(self.questions):
             raise ValueError("还有题目未完成")
 
         self.status = ExerciseStatus.SUBMITTED
         self.notify_observers()
 
-        final_score = self.scoring_strategy.calculate_score(self.answers)
+        # 根据策略类型传递难度参数
+        if isinstance(self.scoring_strategy, TimedScoringStrategy):
+            final_score = self.scoring_strategy.calculate_score(
+                self.answers, self.difficulty
+            )
+        else:
+            final_score = self.scoring_strategy.calculate_score(self.answers)
 
         self.status = ExerciseStatus.GRADED
         self.notify_observers()

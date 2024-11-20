@@ -515,6 +515,15 @@ class ExerciseWidget(QWidget):
         self.feedback_thread = None
         self.stop_event = Event()
 
+        # 添加练习参数成员变量
+        self.difficulty = None
+        self.number_range = None
+        self.operators = None
+        self.operator_types = None
+        self.question_count = None
+        self.scoring_strategy = None
+        self.total_time = 0  # 添加总用时记录
+
         # 初始化信号
         self.ui_signals = UIUpdateSignals()
         self.ui_signals.client_init_success.connect(self.onClientInitSuccess)
@@ -523,7 +532,7 @@ class ExerciseWidget(QWidget):
         self.ui_signals.clear_text.connect(self.clearFeedbackText)
 
         self.setupUI()
-        self.initExercise()
+        # self.initExercise()
 
     def setupUI(self):
         # 主布局
@@ -864,17 +873,10 @@ class ExerciseWidget(QWidget):
         self.timer.start(1000)
 
     def addQuestionCard(self, question_text: str):
-        # 获取当前卡片的索引
-        current_index = len(self.question_cards)
-
         card = QuestionCard(question_text)
         # 使用固定值捕获当前索引
-        card.submit_button.clicked.connect(
-            lambda checked: self.handleAnswer(current_index)
-        )
-        card.answer_input.returnPressed.connect(
-            lambda idx=current_index: self.handleAnswer(idx)
-        )
+        card.submit_button.clicked.connect(self.handleAnswer)
+        card.answer_input.returnPressed.connect(self.handleAnswer)
 
         # 创建动画
         self.questions_container.addWidget(card)
@@ -902,13 +904,13 @@ class ExerciseWidget(QWidget):
         self.scroll_animation.setEasingCurve(QEasingCurve.OutCubic)
         self.scroll_animation.start()
 
-    def handleAnswer(self, question_index: int):
-        print(f"question_index: {question_index}")
-        if question_index >= len(self.question_cards):
+    def handleAnswer(self):
+        print(f"question_index: {self.current_question_index}")
+        if self.current_question_index >= len(self.question_cards):
             return
 
-        card = self.question_cards[question_index]
-        list_item = self.question_list.item(question_index)
+        card = self.question_cards[self.current_question_index]
+        list_item = self.question_list.item(self.current_question_index)
 
         try:
             answer = float(card.answer_input.text())
@@ -922,42 +924,48 @@ class ExerciseWidget(QWidget):
         # 更新最后答题时间
         self.exercise.last_answer_time = current_time
 
-        # 提交答案并显示结果
-        is_correct = self.exercise.submit_answer(question_index, answer, time_spent)
+        # 更新总用时
+        self.total_time = int(time.time() - self.start_time)
 
-        card.showResult(is_correct, self.exercise.questions[question_index].answer)
+        # 提交答案并显示结果
+        is_correct = self.exercise.submit_answer(self.current_question_index, answer, time_spent)
+
+        card.showResult(is_correct, self.exercise.questions[self.current_question_index].answer)
         list_item.updateDisplay("正确" if is_correct else "错误")
 
         # 更新进度
-        progress = (question_index + 1) / len(self.exercise.questions) * 100
+        progress = (self.current_question_index + 1) / len(self.exercise.questions) * 100
         self.progress_bar.setValue(progress)
 
         # 记录答题信息
         question_record = QuestionRecord(
-            content=self.exercise.questions[question_index].content,
+            content=self.exercise.questions[self.current_question_index].content,
             user_answer=answer,
-            correct_answer=self.exercise.questions[question_index].answer,
+            correct_answer=self.exercise.questions[self.current_question_index].answer,
             is_correct=is_correct,
             time_spent=time_spent,
         )
         self.exercise_record.add_question_record(question_record)
 
+        # 更新当前题目索引并处理下一题
+        self.current_question_index += 1
+
         # 如果还有下一题，添加新卡片
-        if question_index + 1 < len(self.exercise.questions):
-            self.addQuestionCard(self.exercise.questions[question_index + 1].content)
-            next_list_item = self.question_list.item(question_index + 1)
+        if self.current_question_index < len(self.exercise.questions):
+            self.addQuestionCard(self.exercise.questions[self.current_question_index].content)
+            next_list_item = self.question_list.item(self.current_question_index)
             next_list_item.updateDisplay("当前")
             self.question_list.setCurrentItem(next_list_item)
         else:
             # 练习完成
             final_score = self.exercise.submit_exercise()
-            self.exercise_record.total_time = time_spent
+            self.exercise_record.total_time = self.total_time
             self.exercise_record.final_score = final_score
 
             completion_msg = (
                 f"练习已完成！\n"
                 f"最终得分：{final_score}分\n"
-                f"用时：{self.formatTime(time_spent)}"
+                f"用时：{self.formatTime(self.total_time)}"
             )
 
             # 如果启用了AI点评
@@ -1153,6 +1161,9 @@ class ExerciseWidget(QWidget):
             card.deleteLater()
         self.question_cards.clear()
 
+        # 重置当前题目索引
+        self.current_question_index = 0
+        
         # 重置布局
         while self.questions_container.count():
             item = self.questions_container.takeAt(0)
@@ -1160,19 +1171,13 @@ class ExerciseWidget(QWidget):
                 item.widget().deleteLater()
 
         # 初始化练习
-        operators = [
-            OperatorType.ADDITION,
-            OperatorType.SUBTRACTION,
-            OperatorType.MULTIPLICATION,
-            OperatorType.DIVISION,
-        ]
         self.exercise = Exercise(
-            difficulty=DifficultyLevel.HARD,
-            number_range=(-100, 100),
-            operators=operators,
+            difficulty=self.difficulty,
+            number_range=self.number_range,
+            operators=self.operators,
         )
         self.exercise.add_observer(Student("测试用户"))
-        self.exercise.set_scoring_strategy(AccuracyScoringStrategy())
+        self.exercise.set_scoring_strategy(self.scoring_strategy)
 
         # 初始化练习记录
         self.exercise_record = ExerciseRecord(
@@ -1182,7 +1187,7 @@ class ExerciseWidget(QWidget):
         )
 
         # 生成题目
-        self.exercise.generate_questions(5)
+        self.exercise.generate_questions(self.question_count)
 
         for i, question in enumerate(self.exercise.questions):
             # 添加到列表
@@ -1212,5 +1217,4 @@ class ExerciseWidget(QWidget):
             )
 
     def resetExercise(self):
-        self.current_question_index = 0
         self.initExercise()
