@@ -31,12 +31,13 @@ from PySide6.QtCore import (
     QParallelAnimationGroup,
     Signal,
     QObject,
+    QEvent,
 )
 from PySide6.QtWidgets import QScroller, QScrollerProperties  # 新增导入
 from PySide6.QtGui import QColor, QPalette, QFont, QTextCursor
 from ..core.exercise import Exercise
 from ..core.exercise_record import ExerciseRecord, QuestionRecord
-from ..models.question import OperatorType
+from ..models.question import OperatorType, DifficultyLevel
 from ..observers.concrete_observers import Student
 from ..strategies.concrete_strategies import (
     TimedScoringStrategy,
@@ -46,6 +47,7 @@ from .preview_window import PreviewWindow
 from .AI_setting_dialog import AISettingsDialog
 from poe_api_wrapper import PoeApi
 import time
+from threading import Thread, Event
 
 
 class UIUpdateSignals(QObject):
@@ -510,6 +512,8 @@ class ExerciseWidget(QWidget):
         self.poe_client = None  # 初始化为None
         self.exercise_record = None
         self.ignore_ai_toggle = False  # 添加这个标志
+        self.feedback_thread = None
+        self.stop_event = Event()
 
         # 初始化信号
         self.ui_signals = UIUpdateSignals()
@@ -672,6 +676,32 @@ class ExerciseWidget(QWidget):
         feedback_label = QLabel("AI点评")
         feedback_label.setStyleSheet("color: #666; font-weight: bold;")
 
+        # 添加重试按钮
+        self.retry_button = QPushButton("重新获取")
+        self.retry_button.setEnabled(False)  # 初始状态禁用
+        self.retry_button.setFixedSize(70, 24)
+        self.retry_button.clicked.connect(self.retryFeedback)
+        self.retry_button.setStyleSheet(
+            """
+            QPushButton {
+                background: #9C27B0;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                margin-left: 5px;
+            }
+            QPushButton:hover {
+                background: #7B1FA2;
+            }
+            QPushButton:pressed {
+                background: #6A1B9A;
+            }
+            QPushButton:disabled {
+                background: #BDBDBD;
+            }
+        """
+        )
+
         # 添加AI点评开关
         self.ai_toggle = QPushButton("启用AI点评")
         self.ai_toggle.setCheckable(True)  # 使按钮可切换
@@ -754,6 +784,7 @@ class ExerciseWidget(QWidget):
         )
 
         feedback_header_layout.addWidget(feedback_label)
+        feedback_header_layout.addWidget(self.retry_button)
         feedback_header_layout.addStretch()
         feedback_header_layout.addWidget(self.ai_toggle)
         feedback_header_layout.addWidget(self.settings_button)
@@ -932,10 +963,9 @@ class ExerciseWidget(QWidget):
             # 如果启用了AI点评
             if self.ai_toggle.isChecked() and self.poe_client is not None:
                 completion_msg += "\n\n正在生成AI点评..."
+                self.upper_container.setMinimumHeight(0)  # 取消最小高度
 
             QMessageBox.information(self, "练习完成", completion_msg)
-
-            self.upper_container.setMinimumHeight(0)  # 取消最小高度
 
             # 仅在启用AI点评且客户端存在时获取反馈
             if self.ai_toggle.isChecked() and self.poe_client is not None:
@@ -971,7 +1001,7 @@ class ExerciseWidget(QWidget):
         """处理AI点评开关状态改变"""
         if self.ignore_ai_toggle:  # 如果标志为True，不执行切换操作
             return
-    
+
         self.settings_button.setEnabled(checked)
         if not checked:
             self.disableAI()
@@ -1007,8 +1037,6 @@ class ExerciseWidget(QWidget):
             self.ai_toggle.setEnabled(False)
 
             # 在子线程中初始化客户端
-            from threading import Thread
-
             def init_client():
                 try:
                     tokens = {
@@ -1040,27 +1068,31 @@ class ExerciseWidget(QWidget):
         """获取AI反馈"""
         self.ui_signals.clear_text.emit()
         self.ui_signals.append_text.emit("正在生成评语，请稍候...")
-        self.settings_button.setEnabled(False)  # 禁用预览按钮
-        self.preview_button.setEnabled(False)  # 禁用预览按钮
+        self.settings_button.setEnabled(False)
+        self.preview_button.setEnabled(False)
+        self.retry_button.setEnabled(True)  # 激活重试按钮
 
         # 禁用AI开关按钮
-        self.ignore_ai_toggle = True  # 设置标志
+        self.ignore_ai_toggle = True
         self.ai_toggle.setEnabled(False)
 
-        # 创建新线程发送消息
-        from threading import Thread
+        # 重置停止事件
+        self.stop_event.clear()
 
         def send_message():
             try:
                 message = self.exercise_record.to_prompt_message()
-                first_chunk = True  # 添加标志来标记第一个响应块
+                first_chunk = True
 
                 # 流式输出AI回复
                 for chunk in self.poe_client.send_message("chinchilla", message):
-                    if first_chunk:  # 只在第一个响应块到达时清除文本
+                    # 检查是否需要停止
+                    if self.stop_event.is_set():
+                        return
+
+                    if first_chunk:
                         self.ui_signals.clear_text.emit()
                         first_chunk = False
-                    # 使用信号在主线程中更新UI
                     self.ui_signals.append_text.emit(chunk["response"])
 
                 # 在主线程中启用相关按钮
@@ -1068,22 +1100,41 @@ class ExerciseWidget(QWidget):
                     self.settings_button.setEnabled(True)
                     self.preview_button.setEnabled(True)
                     self.ai_toggle.setEnabled(True)
-                    self.ignore_ai_toggle = False  # 重置标志
-                
+                    self.retry_button.setEnabled(False)  # 完成后禁用重试按钮
+                    self.ignore_ai_toggle = False
+
+                QApplication.instance().postEvent(
+                    self, QEvent(QEvent.Type(QEvent.User + 1))
+                )
                 enable_buttons()
 
             except Exception as e:
+
                 def handle_error():
                     self.ui_signals.clear_text.emit()
                     self.ui_signals.append_text.emit(f"\n获取AI反馈失败：{str(e)}")
                     self.settings_button.setEnabled(True)
                     self.preview_button.setEnabled(False)
                     self.ai_toggle.setEnabled(True)
-                    self.ignore_ai_toggle = False  # 重置标志
-                
+                    self.retry_button.setEnabled(True)  # 失败时保持重试按钮激活
+                    self.ignore_ai_toggle = False
+
                 handle_error()
 
-        Thread(target=send_message, daemon=True).start()
+        # 保存线程引用
+        self.feedback_thread = Thread(target=send_message, daemon=True)
+        self.feedback_thread.start()
+
+    def retryFeedback(self):
+        """重试获取反馈"""
+        if self.feedback_thread and self.feedback_thread.is_alive():
+            # 设置停止标志
+            self.stop_event.set()
+            # 等待线程结束
+            self.feedback_thread.join(timeout=1.0)
+
+        # 重新获取反馈
+        self.getFeedback()
 
     def updateTimer(self):
         if self.current_question_index < len(self.exercise.questions):
@@ -1109,21 +1160,29 @@ class ExerciseWidget(QWidget):
                 item.widget().deleteLater()
 
         # 初始化练习
-        self.exercise = Exercise("简单", (1, 100))
+        operators = [
+            OperatorType.ADDITION,
+            OperatorType.SUBTRACTION,
+            OperatorType.MULTIPLICATION,
+            OperatorType.DIVISION,
+        ]
+        self.exercise = Exercise(
+            difficulty=DifficultyLevel.HARD,
+            number_range=(-100, 100),
+            operators=operators,
+        )
         self.exercise.add_observer(Student("测试用户"))
         self.exercise.set_scoring_strategy(AccuracyScoringStrategy())
 
         # 初始化练习记录
         self.exercise_record = ExerciseRecord(
-            difficulty="简单",
-            number_range=(1, 100),
-            operator_types=["加法", "减法"],
+            difficulty=DifficultyLevel.EASY.value,
+            number_range=(-100, 100),
+            operator_types=["加法", "减法", "乘法", "除法"],
         )
 
         # 生成题目
-        self.exercise.generate_questions(
-            [OperatorType.ADDITION, OperatorType.SUBTRACTION], count=5
-        )
+        self.exercise.generate_questions(5)
 
         for i, question in enumerate(self.exercise.questions):
             # 添加到列表
