@@ -1,5 +1,3 @@
-# src/models/arithmetic_tree.py
-
 from dataclasses import dataclass
 from typing import Optional
 from .question import OperatorType

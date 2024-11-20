@@ -1214,9 +1214,9 @@ class ExerciseWidget(QWidget):
 
         # 初始化练习记录
         self.exercise_record = ExerciseRecord(
-            difficulty=DifficultyLevel.EASY.value,
-            number_range=(-100, 100),
-            operator_types=["加法", "减法", "乘法", "除法"],
+            difficulty=self.difficulty.value,
+            number_range=self.number_range,
+            operator_types=self.operator_types,
         )
 
         # 生成题目
