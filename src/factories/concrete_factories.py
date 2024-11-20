@@ -11,7 +11,7 @@ class ArithmeticQuestionFactory(QuestionFactory):
 
         # 初始节点的结果使用加权随机
         initial_operator = self._get_random_operator()
-        initial_result = self._get_weighted_result(initial_operator)
+        initial_result = self._get_suitable_result(initial_operator)
 
         self.tree.root = ArithmeticNode(
             operand=initial_result, operator=initial_operator
@@ -20,6 +20,7 @@ class ArithmeticQuestionFactory(QuestionFactory):
         count = 1
         queue = deque([self.tree.root])
         operators = []  # 记录使用的运算符
+        check=False
 
         while count < operand_count:
             current_node = queue[0]
@@ -33,6 +34,8 @@ class ArithmeticQuestionFactory(QuestionFactory):
 
             # 根据不同运算符生成合适的操作数
             left_num, right_num = self._generate_operands(operator, operand)
+            if not check:
+                check=True
 
             if left_num is None or right_num is None:
                 # 如果生成失败，重新选择运算符

@@ -16,6 +16,8 @@ class QuestionFactory(ABC):
         self.min_num = number_range[0]
         self.max_num = number_range[1]
         self.operators = operators
+        # 存储范围内的合数
+        self.composite_numbers = self._get_composite_numbers()
         self.tree = ArithmeticTree()
 
     @abstractmethod
@@ -42,67 +44,86 @@ class QuestionFactory(ABC):
         """随机选择运算符"""
         return random.choice(self.operators)
 
-    def _get_weighted_result(self, operator: OperatorType) -> int:
-        """根据运算符类型获取加权随机的结果"""
+    def _get_suitable_result(self, operator: OperatorType) -> Optional[int]:
+        """根据运算符类型获取合适的结果值"""
         from math import floor, ceil
 
-        if operator != OperatorType.DIVISION:
-            return random.randint(self.min_num, self.max_num)
+        min_num, max_num = self.min_num, self.max_num
 
-        a, b = self.min_num, self.max_num
-        result_weights = []  # [(result, weight)]
+        if operator in (OperatorType.ADDITION, OperatorType.SUBTRACTION):
+            return random.randint(min_num, max_num)
 
-        # 跳过0、1、-1这些特殊值
-        skip_values = {0, 1, -1}
+        elif operator == OperatorType.MULTIPLICATION:
+            if not self.composite_numbers:
+                return None
+            return random.choice(list(self.composite_numbers))
 
-        if b > a > 0:  # 正数范围
-            for n in range(a, floor(b / 2) + 1):
-                if n in skip_values:
-                    continue
-                count = floor(b / n) - 1  # 减1是因为不考虑x/1=x的情况
-                if count > 0:
-                    result_weights.append((n, count))
+        elif operator == OperatorType.DIVISION:
+            if min_num >= 0:  # 全正数范围
+                # 跳过0、1这些特殊值
+                skip_values = {0, 1}
+                candidates = []
 
-        elif a < b < 0:  # 负数范围
-            for n in range(ceil(a / 2), b + 1):
-                if n in skip_values:
-                    continue
-                count = floor(a / n) - 1
-                if count > 0:
-                    result_weights.append((n, count))
+                # 对于每个可能的商
+                for n in range(max(2, min_num), floor(max_num / 2) + 1):
+                    # 计算有多少个数能被n整除且商在范围内
+                    count = sum(
+                        1
+                        for i in range(2, floor(max_num / n) + 1)
+                        if min_num <= n * i <= max_num and i not in skip_values
+                    )
+                    if count > 0:
+                        candidates.extend([n] * count)
 
-        elif a <= 0 <= b:  # 跨越0的范围
-            # 确定考虑范围的边界
-            upper_limit = max(-a, b) / 2
-            lower_limit = min(a, -b) / 2
+            elif max_num <= 0:  # 全负数范围
+                # 跳过0、-1这些特殊值
+                skip_values = {0, -1}
+                candidates = []
 
-            upper_limit = min(b, floor(upper_limit))
-            lower_limit = max(a, ceil(lower_limit))
+                # 对于每个可能的商
+                for n in range(ceil(min_num / 2), min(-2, max_num + 1)):
+                    # 计算有多少个数能被n整除且商在范围内
+                    count = sum(
+                        1
+                        for i in range(ceil(min_num / n), -1)
+                        if min_num <= n * i <= max_num and i not in skip_values
+                    )
+                    if count > 0:
+                        candidates.extend([n] * count)
 
-            for n in range(lower_limit, upper_limit + 1):
-                if n in skip_values:
-                    continue
-                count = 0
-                if a < 0:
-                    count += floor(abs(a / n)) - 1
-                if b > 0:
-                    count += floor(abs(b / n)) - 1
-                if count > 0:
-                    result_weights.append((n, count))
+            else:  # 跨越0的范围
+                max_abs = max(abs(min_num), abs(max_num))
+                skip_values = {-1, 0, 1}
+                candidates = []
 
-        if not result_weights:  # 如果没有找到合适的结果
-            return random.randint(self.min_num, self.max_num)  # 退化为普通随机
+                # 正商
+                if max_num > 0:
+                    for n in range(2, floor(max_num / 2) + 1):
+                        count = sum(
+                            1
+                            for i in range(2, floor(max_num / n) + 1)
+                            if min_num <= n * i <= max_num and i not in skip_values
+                        )
+                        if count > 0:
+                            candidates.extend([n] * count)
 
-        # 根据权重随机选择结果
-        total_weight = sum(weight for _, weight in result_weights)
-        r = random.uniform(0, total_weight)
-        current_weight = 0
-        for result, weight in result_weights:
-            current_weight += weight
-            if r <= current_weight:
-                return result
+                # 负商
+                if min_num < 0:
+                    for n in range(ceil(min_num / 2), -2):
+                        count = sum(
+                            1
+                            for i in range(ceil(min_num / n), -2)
+                            if min_num <= n * i <= max_num and i not in skip_values
+                        )
+                        if count > 0:
+                            candidates.extend([n] * count)
 
-        return result_weights[-1][0]  # 保险起见返回最后一个可能的结果
+            if not candidates:
+                return None
+
+            return random.choice(candidates)
+
+        return None  # 对于未知的运算符返回None
 
     def _generate_operands(
         self, operator: OperatorType, result: int
@@ -116,24 +137,24 @@ class QuestionFactory(ABC):
             # 计算left可能的取值范围
             left_min = max(result - max_num, min_num)
             left_max = min(result - min_num, max_num)
-            
+
             # 检查是否是空集
             if left_min > left_max:
                 return None, None
-                
+
             left = random.randint(left_min, left_max)
             right = result - left
             return left, right
-            
+
         elif operator == OperatorType.SUBTRACTION:
             # 计算left可能的取值范围
             left_min = max(min_num, result + min_num)
             left_max = min(max_num, result + max_num)
-            
+
             # 检查是否是空集
             if left_min > left_max:
                 return None, None
-                
+
             left = random.randint(left_min, left_max)
             right = left - result
             return left, right
@@ -141,14 +162,22 @@ class QuestionFactory(ABC):
         elif operator == OperatorType.MULTIPLICATION:
             if result == 0:
                 return random.randint(min_num, max_num), 0
+                
+            # 在[-abs(result)+1, abs(result)-1]范围内寻找因数，排除±1
             factors = []
-            for i in range(min_num, min(result + 1, max_num + 1)):
-                if i == 0:
+            search_start = max(-abs(result) + 1, min_num)
+            search_end = min(abs(result) - 1, max_num)
+            
+            for i in range(search_start, search_end + 1):
+                if i in {-1, 0, 1}:  # 排除0和±1
                     continue
-                if result % i == 0 and min_num <= result // i <= max_num:
+                if (result % i == 0 and 
+                    min_num <= result // i <= max_num):  # 确保另一个因数也在范围内
                     factors.append(i)
+                    
             if not factors:
                 return None, None
+                
             left = random.choice(factors)
             return left, result // left
 
@@ -194,3 +223,64 @@ class QuestionFactory(ABC):
                 return left, right
 
             return None, None
+
+    def _sieve_of_eratosthenes(self, n: int) -> set[int]:
+        """埃拉托斯特尼筛法，找出n以内的所有素数"""
+        # 初始化标记数组，默认所有数都是素数
+        is_prime = [True] * (n + 1)
+        is_prime[0] = is_prime[1] = False
+
+        # 从2开始遍历到sqrt(n)
+        for i in range(2, int(n**0.5) + 1):
+            if is_prime[i]:
+                # 将i的所有倍数标记为非素数
+                for j in range(i * i, n + 1, i):
+                    is_prime[j] = False
+
+        # 返回所有素数
+        return {i for i in range(2, n + 1) if is_prime[i]}
+
+    def _get_composite_numbers(self) -> set[int]:
+        """获取数值范围内的所有合数"""
+        min_num, max_num = self.min_num, self.max_num
+
+        if min_num >= 0:  # 全正数范围
+            primes = self._sieve_of_eratosthenes(max_num)
+            # 排除1和素数
+            return set(range(min_num, max_num + 1)) - primes - {0, 1}
+
+        elif max_num <= 0:  # 全负数范围
+            primes = self._sieve_of_eratosthenes(-min_num)
+            # 取相反数，排除-1
+            return {
+                -x for x in range(-max_num, -min_num + 1) if x not in primes and x != 1
+            }
+
+        else:  # 跨越0的范围
+            max_abs = max(abs(min_num), abs(max_num))
+            primes = self._sieve_of_eratosthenes(max_abs)
+            result = set()
+
+            # 添加正数范围
+            if max_num > 0:
+                result.update(
+                    set(range(1 if min_num <= 0 else min_num, max_num + 1))
+                    - primes
+                    - {0, 1}
+                )
+
+            # 添加负数范围
+            if min_num < 0:
+                result.update(
+                    {
+                        -x
+                        for x in range(1 if max_num >= 0 else -max_num, -min_num + 1)
+                        if x not in primes and x != 1
+                    }
+                )
+
+            # 如果范围包含0，添加0
+            if min_num <= 0 <= max_num:
+                result.add(0)
+
+            return result
