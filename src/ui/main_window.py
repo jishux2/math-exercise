@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QPushButton,
+    QMessageBox,
 )
 from .exercise_widget import ExerciseWidget
 from .exercise_settings_dialog import ExerciseSettingsDialog
@@ -77,8 +78,25 @@ class MainWindow(QMainWindow):
             exercise_widget.question_count = settings["question_count"]
             exercise_widget.scoring_strategy = settings["scoring_strategy"]
 
-            # 初始化练习
-            exercise_widget.initExercise()
+            try:
+                # 初始化练习
+                exercise_widget.initExercise()
+            except ValueError as e:
+                QMessageBox.warning(
+                    self,
+                    "生成题目失败",
+                    f"无法生成符合条件的题目，请尝试调整参数！\n\n具体原因：{str(e)}",
+                )
+                exercise_window.deleteLater()  # 清理未使用的窗口
+                return
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "发生错误",
+                    f"初始化练习时发生未知错误！\n\n错误信息：{str(e)}",
+                )
+                exercise_window.deleteLater()  # 清理未使用的窗口
+                return
 
             # 显示练习窗口
             exercise_window.show()
