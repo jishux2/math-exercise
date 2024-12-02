@@ -33,6 +33,17 @@
    pip install -r requirements.txt
    ```
 
+4. （可选）安装AI点评相关依赖
+   ```bash
+   python install_poe.py
+   ```
+   
+   > 注意：AI点评功能需要代理支持
+   > - 默认配置支持v2rayN（端口10809）
+   > - 如果使用clash，需要手动修改`poe_api_wrapper`依赖中的以下文件中的端口设置：
+   >   - `poe_api_wrapper/__init__.py`
+   >   - `poe_api_wrapper/proxies.py`
+
 ## 项目结构
 
 ```
