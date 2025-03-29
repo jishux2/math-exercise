@@ -1,79 +1,90 @@
 # Math Exercise Generator
 
-一个基于Python的数学练习题生成器，支持加减乘除四则运算，提供灵活的题目生成策略和评分机制。
+一个基于FastAPI + React的在线数学练习系统，支持加减乘除四则运算，提供灵活的题目生成策略和评分机制。
 
 ## 功能特点
 
 - 支持加减乘除四则运算题目生成
 - 灵活的难度设置和数字范围控制
 - 多种评分策略（计时得分、准确率得分等）
-- 观察者模式实现练习状态通知
 - 工厂模式实现题目生成
 - 策略模式实现灵活的评分机制
-- 可选的AI点评功能（需要额外安装poe_api_wrapper包）
+- 观察者模式实现练习状态监控
+- 前后端分离架构
+- JWT身份验证
+- AI点评功能（需要配置POE API Token）
 
-## 安装
+## 项目结构
+
+```
+math_exercise/
+├── backend/              # FastAPI后端
+│   ├── app/             # 后端应用代码
+│   ├── requirements.txt # Python依赖
+│   └── README.md        # 后端说明文档
+│
+├── frontend/            # React前端
+│   ├── src/            # 前端源代码
+│   ├── package.json    # Node.js依赖
+│   └── README.md       # 前端说明文档
+│
+└── README.md           # 项目说明文档
+```
+
+## 环境要求
+
+- Python 3.11+
+- Node.js 20.x.x
+- Windows/Linux/macOS
+
+## 快速开始
 
 1. 克隆仓库
    ```bash
    git clone https://github.com/jishux2/math-exercise.git
    cd math-exercise
    ```
-   
-2. 创建虚拟环境
+
+2. 启动后端服务
    ```bash
+   cd backend
+   
+   # 创建虚拟环境
    python -m venv venv
    source venv/bin/activate  # Linux/Mac
    # 或
-   venv\Scripts\activate  # Windows
-   ```
+   venv\Scripts\activate     # Windows
    
-3. 安装依赖
-   ```bash
+   # 安装依赖
    pip install -r requirements.txt
-   ```
-
-4. （可选）安装AI点评相关依赖
-   ```bash
-   python install_poe.py
-   ```
    
-   > 注意：AI点评功能需要代理支持
-   > - 默认配置支持v2rayN（端口10809）
-   > - 如果使用clash，需要手动修改`poe_api_wrapper`依赖中的以下文件中的端口设置：
-   >   - `poe_api_wrapper/__init__.py`
-   >   - `poe_api_wrapper/proxies.py`
+   # 安装AI服务依赖（可选）
+   python install_poe.py
+   
+   # 启动服务
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
 
-## 项目结构
+3. 启动前端服务
+   ```bash
+   cd frontend
+   
+   # 安装依赖
+   npm install
+   
+   # 启动开发服务器
+   npm start
+   ```
 
-```
-math_exercise/
-│
-├── src/                    # 源代码目录
-│   ├── models/            # 数据模型
-│   ├── factories/         # 工厂模式实现
-│   ├── strategies/        # 策略模式实现
-│   ├── observers/         # 观察者模式实现
-│   ├── core/             # 核心功能实现
-│   └── ui/               # 用户界面实现
-│
-├── examples/              # 示例代码
-│   ├── main.py           # 命令行版本
-│   └── main_gui.py       # 图形界面版本
-│
-├── screenshots/           # 界面截图
-├── requirements.txt       # 项目依赖
-└── README.md             # 项目说明
-```
+4. 访问应用
+   - 打开浏览器访问：http://localhost:3000
+   - API文档：http://localhost:8000/docs
 
-## 运行方式
+## 开发说明
 
-### 图形界面版本
-```bash
-python -m examples.main_gui
-```
+- 后端API开发：参见 [backend/README.md](backend/README.md)
+- 前端开发：参见 [frontend/README.md](frontend/README.md)
 
-### 命令行版本
-```bash
-python -m examples.main
-```
+## License
+
+MIT

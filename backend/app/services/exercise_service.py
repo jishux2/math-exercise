@@ -1,0 +1,143 @@
+from datetime import datetime
+from typing import Optional, List
+from sqlalchemy.orm import Session
+from sqlalchemy import desc
+from ..models import Exercise, Question, User
+from ..schemas import exercise as schemas
+from ..core.arithmetic_factory import QuestionGenerator  # 更新导入路径
+from ..core.scoring import TimedScoringStrategy, BasicScoringStrategy
+from .base import BaseService
+
+
+class ExerciseService(BaseService[Exercise, schemas.ExerciseCreate, schemas.ExerciseUpdate]):
+    def __init__(self, db: Session):
+        super().__init__(Exercise, db)
+        self.basic_scoring = BasicScoringStrategy()
+        self.timed_scoring = TimedScoringStrategy()
+
+    def create_exercise(self, *, user_id: int, exercise_in: schemas.ExerciseCreate) -> Exercise:
+        """创建新的练习"""
+        # 创建练习记录
+        db_exercise = Exercise(
+            user_id=user_id,
+            difficulty=exercise_in.difficulty,
+            number_range=exercise_in.number_range,
+            operator_types=[op.value for op in exercise_in.operator_types]
+        )
+        self.db.add(db_exercise)
+        self.db.flush()
+
+        # 生成题目
+        generator = QuestionGenerator(
+            exercise_in.difficulty,
+            exercise_in.number_range,
+            exercise_in.operator_types
+        )
+
+        questions = []
+        for _ in range(exercise_in.question_count):
+            content, answer, operators, tree_json = generator.generate_question()
+            db_question = Question(
+                exercise_id=db_exercise.id,
+                content=content,
+                correct_answer=answer,
+                operator_types=operators,
+                arithmetic_tree=tree_json
+            )
+            questions.append(db_question)
+
+        self.db.bulk_save_objects(questions)
+        self.db.commit()
+        self.db.refresh(db_exercise)
+        return db_exercise
+
+    def get_exercise_with_questions(self, exercise_id: int) -> Optional[Exercise]:
+        """获取练习及其题目"""
+        return self.db.query(Exercise).filter(Exercise.id == exercise_id).first()
+
+    def submit_answer(
+        self, 
+        exercise_id: int, 
+        question_id: int, 
+        user_answer: float, 
+        time_spent: int
+    ) -> dict:
+        """提交答案"""
+        question = self.db.query(Question).filter(
+            Question.exercise_id == exercise_id,
+            Question.id == question_id
+        ).first()
+
+        if not question:
+            raise ValueError("Question not found")
+
+        question.user_answer = user_answer
+        question.time_spent = time_spent
+        
+        # 直接使用is_correct属性
+        is_correct = question.is_correct
+
+        self.db.commit()
+
+        return {
+            "is_correct": is_correct,
+            "correct_answer": question.correct_answer
+        }
+
+    def complete_exercise(self, exercise_id: int) -> float:
+        """完成练习并计算得分"""
+        exercise = self.get_exercise_with_questions(exercise_id)
+        if not exercise:
+            raise ValueError("Exercise not found")
+
+        if exercise.completed_at:
+            raise ValueError("Exercise already completed")
+
+        # 使用to_response方法简化转换
+        questions = [q.to_response() for q in exercise.questions]
+
+        final_score = self.timed_scoring.calculate_score(
+            questions=questions,
+            difficulty=exercise.difficulty
+        )
+
+        exercise.completed_at = datetime.utcnow()
+        exercise.final_score = final_score
+        exercise.total_time = sum(q.time_spent or 0 for q in exercise.questions)
+
+        self.db.commit()
+        return final_score
+
+    def get_user_exercises(
+        self,
+        user_id: int,
+        skip: int = 0,
+        limit: int = 10
+    ) -> tuple[List[Exercise], int]:
+        """获取用户的练习列表"""
+        query = self.db.query(Exercise).filter(Exercise.user_id == user_id)
+        total = query.count()
+        exercises = query.order_by(desc(Exercise.created_at)).offset(skip).limit(limit).all()
+        return exercises, total
+
+    def get_exercise_stats(self, exercise_id: int) -> dict:
+        """获取练习的统计信息"""
+        exercise = self.get_exercise_with_questions(exercise_id)
+        if not exercise:
+            raise ValueError("Exercise not found")
+
+        total_questions = len(exercise.questions)
+        answered_questions = sum(1 for q in exercise.questions if q.user_answer is not None)
+        correct_answers = sum(
+            1 for q in exercise.questions
+            if q.user_answer is not None and abs(q.correct_answer - q.user_answer) < 0.001
+        )
+
+        return {
+            "total_questions": total_questions,
+            "answered_questions": answered_questions,
+            "correct_answers": correct_answers,
+            "accuracy_rate": round(correct_answers / total_questions * 100, 2) if total_questions > 0 else 0,
+            "completion_rate": round(answered_questions / total_questions * 100, 2) if total_questions > 0 else 0,
+            "average_time": round(exercise.total_time / total_questions, 2) if exercise.total_time else 0
+        }
