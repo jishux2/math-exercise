@@ -66,9 +66,30 @@ class QuestionFactory(ABC):
         
         min_num, max_num = self.min_num, self.max_num  # 获取数值范围的上下限
         
-        # 处理加法和减法：直接从允许范围内随机选择一个数
-        if operator in (OperatorType.ADDITION, OperatorType.SUBTRACTION):
-            return random.randint(min_num, max_num)
+        # 处理加法：考虑两个范围内的数相加的可能结果范围
+        if operator == OperatorType.ADDITION:
+            # 结果范围：[max(2*min_num, min_num), min(2*max_num, max_num)]
+            # - 最小结果：两个最小值相加，但不小于允许的最小值
+            # - 最大结果：两个最大值相加，但不大于允许的最大值
+            result_min = max(2 * min_num, min_num)
+            result_max = min(2 * max_num, max_num)
+            
+            # 确保范围有效（最小值不大于最大值）
+            if result_min > result_max:
+                return None
+            return random.randint(result_min, result_max)
+        
+        # 处理减法：考虑两个范围内的数相减的可能结果范围    
+        elif operator == OperatorType.SUBTRACTION:
+            # 结果范围：[max(min_num-max_num, min_num), min(max_num-min_num, max_num)]
+            # - 最小结果：最小值减最大值，但不小于允许的最小值
+            # - 最大结果：最大值减最小值，但不大于允许的最大值
+            result_min = max(min_num - max_num, min_num)
+            result_max = min(max_num - min_num, max_num)
+            
+            if result_min > result_max:
+                return None
+            return random.randint(result_min, result_max)
         
         # 处理乘法：从预先计算好的合数集合中随机选择一个数
         elif operator == OperatorType.MULTIPLICATION:
