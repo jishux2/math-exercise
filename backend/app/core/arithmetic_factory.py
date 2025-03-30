@@ -19,6 +19,16 @@ from .question_factory import QuestionFactory
 from .arithmetic_tree import ArithmeticNode
 import json
 
+import logging
+
+# 获取logger，只添加NullHandler，移除其他所有handler
+logger = logging.getLogger(__name__)
+# 清除所有已存在的handler
+logger.handlers = []
+# 添加NullHandler
+logger.addHandler(logging.NullHandler())
+# 不传播到父logger
+logger.propagate = False
 
 class ArithmeticQuestionFactory(QuestionFactory):
     """具体的算术题目生成工厂"""
@@ -29,14 +39,18 @@ class ArithmeticQuestionFactory(QuestionFactory):
         """
         # 获取根据难度确定的操作数个数
         operand_count = self._get_operand_count()
+        logger.debug(f"生成题目开始：操作数数量={operand_count}")
         # 用于存储所有未完成（需要继续处理）的节点
         incomplete_nodes = []
 
         # 随机选择初始运算符和生成合适的结果值
         initial_operator = self._get_random_operator()
         initial_result = self._get_suitable_result(initial_operator)
-
+        
+        logger.debug(f"初始操作符：{initial_operator}，目标结果：{initial_result}")
+        
         if initial_result is None:
+            logger.error(f"无法生成合适的初始结果：操作符={initial_operator}，数值范围=[{self.min_num}, {self.max_num}]")
             raise ValueError("无法生成合适的初始结果")
 
         # 创建算术树的根节点，使用初始结果值和运算符
@@ -46,7 +60,6 @@ class ArithmeticQuestionFactory(QuestionFactory):
 
         count = 1  # 当前已处理的操作数计数
         operators = []  # 记录使用的运算符列表
-        check = False  # 用于Debug的标志（当前未使用）
 
         # 继续生成节点，直到达到所需的操作数个数
         while count < operand_count:
@@ -55,6 +68,8 @@ class ArithmeticQuestionFactory(QuestionFactory):
             incomplete_nodes.remove(current_node)  # 移除已选择的节点
             operator = current_node.operator
             operand = current_node.operand
+
+            logger.debug(f"处理节点：操作符={operator}，操作数={operand}")
 
             # 为当前节点创建左右子节点
             left_node = ArithmeticNode(0)
@@ -75,14 +90,19 @@ class ArithmeticQuestionFactory(QuestionFactory):
             # 尝试生成合适的操作数
             while (left_num is None or right_num is None) and retry_count < max_retries:
                 left_num, right_num = self._generate_operands(operator, operand)
+                logger.debug(f"尝试生成操作数：左={left_num}，右={right_num}，重试次数={retry_count}")
+                
                 if left_num is None or right_num is None:
                     # 如果生成失败，重新选择运算符再试
                     current_node.operator = self._get_random_operator()
                     operator = current_node.operator
+                    logger.debug(f"更换操作符重试：新操作符={operator}")
                 retry_count += 1
 
             # 如果达到最大重试次数仍然失败，抛出异常
             if retry_count >= max_retries:
+                logger.error(f"无法生成合适的操作数：操作符={operator}，目标结果={operand}，" 
+                           f"数值范围=[{self.min_num}, {self.max_num}]")
                 raise ValueError("无法生成合适的操作数")
 
             operators.append(operator)  # 记录使用的运算符
@@ -102,7 +122,7 @@ class ArithmeticQuestionFactory(QuestionFactory):
 
             count += 1  # 更新操作数计数
 
-        # 清理未使用的运算符
+        logger.debug("清理未使用的运算符")
         def clean_unused_operators(node: ArithmeticNode):
             """递归清理未被使用的运算符（即叶子节点上的运算符）"""
             if not node:
@@ -115,12 +135,10 @@ class ArithmeticQuestionFactory(QuestionFactory):
             clean_unused_operators(node.right_node)
 
         clean_unused_operators(self.tree.root)
-
-        # 生成算术表达式字符串
+        # 生成算术表达式字符串并计算结果
         arithmetic = self.tree.get_arithmetic()
-        # 计算表达式结果
         result = float(self.tree.calculate_result())
-        # 创建并返回Question对象
+        logger.debug(f"生成题目完成：{arithmetic} = {result}")
         return Question(content=arithmetic, correct_answer=result, operator_types=operators)
 
 
