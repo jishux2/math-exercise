@@ -1,6 +1,27 @@
+"""
+Logger层级结构：
+
+root (有FileHandler和StreamHandler)
+  ├── __main__ (测试程序的logger，传播到root)
+  └── app
+      └── core
+          └── arithmetic_factory (有自己的handlers，propagate=False避免重复输出)
+
+算术工厂的logger通过propagate=False阻止日志传播到root logger，这样：
+1. 算术工厂的日志只由自己的handlers处理
+2. 测试程序的日志通过传播到root logger来处理
+3. 避免了日志重复输出
+"""
+
 import sys
 import os
 
+# 将backend目录添加到Python的模块搜索路径
+# 这样可以直接导入app模块，而不用考虑测试文件的相对位置
+# __file__: '.../backend/tests/test_arithmetic_factory.py'
+# os.path.abspath(__file__): 获取当前文件的绝对路径
+# os.path.dirname(...): 获取tests目录
+# os.path.dirname(...): 获取backend目录
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.arithmetic_factory import ArithmeticQuestionFactory, QuestionGenerator
@@ -26,7 +47,6 @@ def setup_module_logger(
     module_logger = logging.getLogger(module_name)
     module_logger.handlers = []  # 清除现有handlers
     module_logger.setLevel(level)
-    module_logger.propagate = True  # 允许传播
     for handler in handlers:
         module_logger.addHandler(handler)
     return module_logger
