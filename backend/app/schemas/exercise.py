@@ -74,8 +74,6 @@ class QuestionResponse(QuestionBase):
     time_spent: Optional[int] = None      # 答题用时，可选
     is_correct: Optional[bool] = None     # 是否正确，可选
 
-    # ConfigDict用于配置Pydantic模型的行为
-    # from_attributes=True 允许直接从ORM模型（如SQLAlchemy模型）创建Pydantic模型
     model_config = ConfigDict(from_attributes=True)
 
 # ==== 练习相关模型 ====
@@ -165,6 +163,26 @@ class ExerciseResponse(ExerciseBase):
     ai_feedback: Optional[str] = None        # AI点评
     questions: List[QuestionResponse]        # 题目列表
 
+    # ConfigDict用于配置Pydantic模型的行为
+    # from_attributes=True 允许直接从ORM模型（如SQLAlchemy模型）创建Pydantic模型
+    # 转换过程：
+    # 1. 当传入SQLAlchemy模型实例时，Pydantic会自动访问实例的属性（通过__dict__或getattr）
+    # 2. 对于普通字段，直接复制值
+    # 3. 对于relationship字段（如questions），递归地转换关联的模型
+    # 4. 对于hybrid_property，会自动计算并包含在结果中
+    # 5. 支持的转换示例：
+    #    # 直接使用model_validate方法转换
+    #    db_exercise = session.query(Exercise).first()
+    #    response = ExerciseResponse.model_validate(db_exercise)
+    #    
+    #    # 在FastAPI路由中的使用：
+    #    @router.post("/", response_model=schemas.ExerciseResponse)
+    #    def create_exercise(...):
+    #        exercise = exercise_service.create_exercise(...)
+    #        return exercise  # FastAPI会自动进行：
+    #                        # 1. Exercise模型 -> ExerciseResponse转换
+    #                        # 2. ExerciseResponse -> JSON序列化
+    #                        # 最终返回JSON格式的响应给客户端
     model_config = ConfigDict(from_attributes=True)
 
 
