@@ -71,6 +71,13 @@ from ..models import User
 from ..schemas.user import TokenPayload
 # 导入令牌负载的Pydantic模型
 
+from typing import List
+# 导入List类型，用于类型提示中的列表参数标注
+
+from ..models.user import UserRole
+# 导入用户角色枚举，用于角色基反问控制（RBAC）
+# UserRole定义了系统中的所有用户类型（学生、教师、家长、管理员）
+
 # 创建OAuth2密码模式的token提取器
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login"
@@ -194,3 +201,22 @@ def get_current_active_user(
             detail="Inactive user"
         )
     return current_user
+
+def check_roles(allowed_roles: List[UserRole]):
+    async def role_checker(
+        current_user: User = Depends(get_current_active_user)
+    ):
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Operation not permitted"
+            )
+        return current_user
+    return role_checker
+
+# 快捷方式
+check_student = check_roles([UserRole.STUDENT])
+check_teacher = check_roles([UserRole.TEACHER])
+check_parent = check_roles([UserRole.PARENT])
+check_admin = check_roles([UserRole.ADMIN])
+check_teacher_or_admin = check_roles([UserRole.TEACHER, UserRole.ADMIN])

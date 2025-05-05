@@ -103,6 +103,13 @@ class Exercise(Base):
     # 练习所属的用户，对应User模型中的exercises属性
     user = relationship("User", back_populates="exercises")
 
+    def to_response(self) -> "ExerciseResponse":
+        """转换为响应模型"""
+        # 避免循环导入，在方法内部导入
+        from ..schemas.exercise import ExerciseResponse
+        # 使用pydantic的model_validate方法将SQLAlchemy模型转换为Pydantic模型
+        return ExerciseResponse.model_validate(self)
+
 class Question(Base):
     """
     题目模型：代表练习中的单个题目
@@ -166,15 +173,5 @@ class Question(Base):
         是因为在解释器执行到这行代码时QuestionResponse类还未被定义，
         使用字符串形式可以避免出现NameError
         """
-        from ..schemas.exercise import QuestionResponse  # 避免循环导入
-        return QuestionResponse(
-            id=self.id,
-            exercise_id=self.exercise_id,
-            content=self.content,
-            operator_types=self.operator_types,
-            arithmetic_tree=self.arithmetic_tree,
-            correct_answer=self.correct_answer,
-            user_answer=self.user_answer,
-            time_spent=self.time_spent,
-            is_correct=self.is_correct
-        )
+        from ..schemas.exercise import QuestionResponse
+        return QuestionResponse.model_validate(self)

@@ -6,10 +6,11 @@ from sqlalchemy.orm import joinedload
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from ...database import get_db
 from ...services import ExerciseService, AIService
 from ...schemas import exercise as schemas
-from ...models import User, Exercise
+from ...models import User, Exercise, Question
 from ..deps import get_current_active_user
 
 from fastapi.responses import JSONResponse
@@ -47,6 +48,77 @@ def list_exercises(
         "total": total,
         "page": skip // limit + 1,
         "page_size": limit
+    }
+
+@router.get("/list", response_model=schemas.ExerciseListResponse)
+async def list_exercises(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+) -> Any:
+    """获取用户的练习列表"""
+    exercise_service = ExerciseService(db)
+    exercises, total = exercise_service.get_user_exercises(
+        user_id=current_user.id,
+        skip=skip,
+        limit=limit
+    )
+    
+    return {
+        "exercises": [exercise.to_response() for exercise in exercises],
+        "total": total,
+        "page": skip // limit + 1,
+        "page_size": limit
+    }
+
+@router.get("/stats")
+def get_user_exercise_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+) -> Any:
+    """获取用户的练习统计信息"""
+    # 基础统计
+    stats = db.query(
+        func.count(Exercise.id).label('total_exercises'),
+        func.count(Exercise.completed_at).label('completed_exercises'),
+        func.avg(Exercise.final_score).label('average_score')
+    ).filter(Exercise.user_id == current_user.id).first()
+
+    # 正确率统计
+    correct_answers = db.query(func.count(Question.id)).join(Exercise).filter(
+        Exercise.user_id == current_user.id,
+        Question.is_correct == True  # 使用hybrid_property
+    ).scalar()
+    
+    total_questions = db.query(func.count(Question.id)).join(Exercise).filter(
+        Exercise.user_id == current_user.id
+    ).scalar()
+
+    # 获取最近的练习分数历史
+    score_history = db.query(
+        Exercise.completed_at,
+        Exercise.final_score
+    ).filter(
+        Exercise.user_id == current_user.id,
+        Exercise.completed_at.isnot(None)
+    ).order_by(Exercise.completed_at.desc()).limit(10).all()
+
+    return {
+        "total_exercises": stats[0] or 0,
+        "completed_exercises": stats[1] or 0,
+        "average_score": round(stats[2] or 0, 2),
+        "accuracy_rate": round(
+            (correct_answers / total_questions * 100) if total_questions else 0, 
+            2
+        ),
+        "score_history": [
+            {
+                "date": completed_at.strftime("%m/%d"),
+                "score": score
+            }
+            for completed_at, score in score_history
+        ]
     }
 
 @router.get("/{exercise_id}", response_model=schemas.ExerciseResponse)
@@ -160,19 +232,7 @@ async def get_ai_feedback(
 
     async def generate():
         # 手动创建ExerciseResponse对象，避免使用from_orm
-        exercise_response = ExerciseResponse(
-            id=exercise.id,
-            user_id=exercise.user_id,
-            difficulty=exercise.difficulty,
-            number_range=exercise.number_range,
-            operator_types=exercise.operator_types,
-            created_at=exercise.created_at,
-            completed_at=exercise.completed_at,
-            final_score=exercise.final_score,
-            total_time=exercise.total_time,
-            ai_feedback=exercise.ai_feedback,
-            questions = [q.to_response() for q in exercise.questions]
-        )
+        exercise_response = ExerciseResponse.model_validate(exercise)
         
         for chunk in ai_service.generate_feedback_stream(
             exercise_response,

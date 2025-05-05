@@ -4,6 +4,7 @@
       它会生成一个带时间戳的日志文件，记录：
       1. 数据库中所有表的结构信息（表名、列、主键、外键等）
       2. 各个表中的实际数据内容
+      3. 数据库整体统计信息（用户分布、练习完成情况等）
       日志文件保存在logs目录下，便于后续查看和分析。
 """
 
@@ -14,11 +15,17 @@ from datetime import datetime  # 用于处理日期和时间
 # 导入SQLAlchemy相关组件
 from sqlalchemy import inspect  # 用于检查数据库结构
 from app.database import engine, SessionLocal  # 导入数据库引擎和会话工厂
-from app.models import User, Exercise, Question  # 导入数据模型
+from app.models import User, Student, Exercise, Question, UserRole  # 导入数据模型
 
 def write_database_info(file):
     """
     将数据库的结构信息写入指定文件
+    
+    包含以下信息：
+    - 表名
+    - 列信息（名称、类型、约束条件、默认值）
+    - 主键信息
+    - 外键关系
     
     Args:
         file: 要写入的文件对象
@@ -34,10 +41,15 @@ def write_database_info(file):
         # 写入表名
         file.write(f"\n表名: {table_name}\n")
         
-        # 写入表的列信息
+        # 写入表的列信息，包含约束和默认值
         file.write("列信息:\n")
         for column in inspector.get_columns(table_name):
-            file.write(f"  - {column['name']}: {column['type']}\n")
+            file.write(f"  - {column['name']}: {column['type']}")
+            if column.get('nullable') is False:
+                file.write(" (NOT NULL)")
+            if column.get('default') is not None:
+                file.write(f" (DEFAULT: {column['default']})")
+            file.write("\n")
             
         # 写入表的主键信息
         pk = inspector.get_pk_constraint(table_name)
@@ -54,6 +66,12 @@ def write_table_data(file):
     """
     将表中的实际数据写入指定文件
     
+    包含以下表的数据：
+    - 用户表（基本信息、角色、状态）
+    - 学生信息表（年级、班级、关联关系）
+    - 练习表（难度、范围、得分、时间）
+    - 题目表（内容、答案、用时、正确性）
+    
     Args:
         file: 要写入的文件对象
     """
@@ -67,23 +85,41 @@ def write_table_data(file):
             file.write(f"用户ID: {user.id}\n")
             file.write(f"邮箱: {user.email}\n")
             file.write(f"用户名: {user.username}\n")
+            file.write(f"角色: {user.role.value}\n")
+            file.write(f"是否活跃: {user.is_active}\n")
+            file.write(f"创建时间: {user.created_at}\n")
             file.write("---\n")  # 分隔符
 
-        # 写入练习表数据
+        # 写入学生信息表数据
+        file.write("\n=== 学生信息数据 ===\n")
+        students = db.query(Student).all()
+        for student in students:
+            file.write(f"ID: {student.id}\n")
+            file.write(f"用户ID: {student.user_id}\n")
+            file.write(f"教师ID: {student.teacher_id}\n")
+            file.write(f"家长ID: {student.parent_id}\n")
+            file.write(f"年级: {student.grade}\n")
+            file.write(f"班级: {student.class_name}\n")
+            file.write(f"创建时间: {student.created_at}\n")
+            file.write("---\n")  # 分隔符
+
+        # 写入练习表数据，包含练习的完整信息
         file.write("\n=== 练习数据 ===\n")
         exercises = db.query(Exercise).all()  # 查询所有练习
         for exercise in exercises:
             file.write(f"练习ID: {exercise.id}\n")
             file.write(f"用户ID: {exercise.user_id}\n")
-            file.write(f"难度: {exercise.difficulty}\n")
+            file.write(f"难度: {exercise.difficulty.value}\n")
             file.write(f"数值范围: {exercise.number_range}\n")
             file.write(f"运算符: {exercise.operator_types}\n")
             file.write(f"得分: {exercise.final_score}\n")
             file.write(f"总用时: {exercise.total_time}秒\n")
+            file.write(f"AI反馈: {exercise.ai_feedback}\n")
             file.write(f"创建时间: {exercise.created_at}\n")
+            file.write(f"完成时间: {exercise.completed_at}\n")
             file.write("---\n")  # 分隔符
 
-        # 写入题目表数据
+        # 写入题目表数据，包含答题详情
         file.write("\n=== 题目数据 ===\n")
         questions = db.query(Question).all()  # 查询所有题目
         for question in questions:
@@ -93,9 +129,53 @@ def write_table_data(file):
             file.write(f"正确答案: {question.correct_answer}\n")
             file.write(f"用户答案: {question.user_answer}\n")
             file.write(f"用时: {question.time_spent}秒\n")
+            file.write(f"运算符: {question.operator_types}\n")
+            file.write(f"算术树: {'已生成' if question.arithmetic_tree else '未生成'}\n")
             file.write(f"是否正确: {question.is_correct}\n")
             file.write("---\n")  # 分隔符
 
+    finally:
+        # 确保会话被关闭
+        db.close()
+
+def write_statistics(file):
+    """
+    写入数据库的统计信息
+    
+    包含以下统计数据：
+    - 用户总数及各角色分布
+    - 练习总数和完成情况
+    - 题目总数
+    
+    Args:
+        file: 要写入的文件对象
+    """
+    # 创建数据库会话
+    db = SessionLocal()
+    try:
+        file.write("\n=== 统计信息 ===\n")
+        
+        # 统计用户信息
+        total_users = db.query(User).count()
+        users_by_role = {}
+        for role in UserRole:
+            count = db.query(User).filter(User.role == role).count()
+            users_by_role[role.value] = count
+        
+        file.write(f"总用户数: {total_users}\n")
+        file.write("用户角色分布:\n")
+        for role, count in users_by_role.items():
+            file.write(f"  - {role}: {count}\n")
+        
+        # 统计练习和题目信息
+        total_exercises = db.query(Exercise).count()
+        completed_exercises = db.query(Exercise).filter(Exercise.completed_at.isnot(None)).count()
+        total_questions = db.query(Question).count()
+        
+        file.write(f"\n总练习数: {total_exercises}\n")
+        file.write(f"已完成练习数: {completed_exercises}\n")
+        file.write(f"总题目数: {total_questions}\n")
+        
     finally:
         # 确保会话被关闭
         db.close()
@@ -108,15 +188,16 @@ if __name__ == "__main__":
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename = f'logs/db_info_{timestamp}.txt'
     
-    # 打开文件并写入数据
+    # 打开文件并写入所有数据
     with open(filename, 'w', encoding='utf-8') as f:
         # 写入文件头部信息
         f.write(f"数据库检查时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write("=" * 50 + "\n")  # 分隔线
         
-        # 依次写入数据库结构和数据内容
+        # 依次写入数据库结构、数据内容和统计信息
         write_database_info(f)
         write_table_data(f)
+        write_statistics(f)
         
     # 输出成功信息
     print(f"数据库信息已写入文件: {filename}")
