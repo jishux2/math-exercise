@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import Optional, List
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
-from ..models import Exercise, Question, User
+from typing import Optional, List, Tuple
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import desc, func, case
+from ..models import Exercise, Question, Student, DifficultyLevel
 from ..schemas import exercise as schemas
-from ..core.arithmetic_factory import QuestionGenerator  # 更新导入路径
+from ..core.arithmetic_factory import QuestionGenerator
 from ..core.scoring import TimedScoringStrategy, BasicScoringStrategy
 from .base import BaseService
 
@@ -15,11 +15,16 @@ class ExerciseService(BaseService[Exercise, schemas.ExerciseCreate, schemas.Exer
         self.basic_scoring = BasicScoringStrategy()
         self.timed_scoring = TimedScoringStrategy()
 
-    def create_exercise(self, *, user_id: int, exercise_in: schemas.ExerciseCreate) -> Exercise:
+    def create_exercise(self, *, student_id: int, exercise_in: schemas.ExerciseCreate) -> Exercise:
         """创建新的练习"""
+        # 验证学生是否存在
+        student = self.db.query(Student).filter(Student.id == student_id).first()
+        if not student:
+            raise ValueError("Student not found")
+
         # 创建练习记录
         db_exercise = Exercise(
-            user_id=user_id,
+            student_id=student_id,
             difficulty=exercise_in.difficulty,
             number_range=exercise_in.number_range,
             operator_types=[op.value for op in exercise_in.operator_types]
@@ -52,8 +57,19 @@ class ExerciseService(BaseService[Exercise, schemas.ExerciseCreate, schemas.Exer
         return db_exercise
 
     def get_exercise_with_questions(self, exercise_id: int) -> Optional[Exercise]:
-        """获取练习及其题目"""
-        return self.db.query(Exercise).filter(Exercise.id == exercise_id).first()
+        """
+        获取练习及其题目
+        使用joinedload预加载questions关系，避免N+1查询问题
+        
+        Args:
+            exercise_id (int): 练习ID
+        
+        Returns:
+            Optional[Exercise]: 找到的练习对象，包含预加载的题目数据，未找到则返回None
+        """
+        return self.db.query(Exercise).options(
+            joinedload(Exercise.questions)  # 预加载questions关系
+        ).filter(Exercise.id == exercise_id).first()
 
     def submit_answer(
         self, 
@@ -108,14 +124,14 @@ class ExerciseService(BaseService[Exercise, schemas.ExerciseCreate, schemas.Exer
         self.db.commit()
         return final_score
 
-    def get_user_exercises(
+    def get_student_exercises(
         self,
-        user_id: int,
+        student_id: int,
         skip: int = 0,
         limit: int = 10
-    ) -> tuple[List[Exercise], int]:
-        """获取用户的练习列表"""
-        query = self.db.query(Exercise).filter(Exercise.user_id == user_id)
+    ) -> Tuple[List[Exercise], int]:
+        """获取学生的练习列表"""
+        query = self.db.query(Exercise).filter(Exercise.student_id == student_id)
         total = query.count()
         exercises = query.order_by(desc(Exercise.created_at)).offset(skip).limit(limit).all()
         return exercises, total
@@ -128,10 +144,7 @@ class ExerciseService(BaseService[Exercise, schemas.ExerciseCreate, schemas.Exer
 
         total_questions = len(exercise.questions)
         answered_questions = sum(1 for q in exercise.questions if q.user_answer is not None)
-        correct_answers = sum(
-            1 for q in exercise.questions
-            if q.user_answer is not None and abs(q.correct_answer - q.user_answer) < 0.001
-        )
+        correct_answers = sum(1 for q in exercise.questions if q.is_correct)
 
         return {
             "total_questions": total_questions,
@@ -141,3 +154,62 @@ class ExerciseService(BaseService[Exercise, schemas.ExerciseCreate, schemas.Exer
             "completion_rate": round(answered_questions / total_questions * 100, 2) if total_questions > 0 else 0,
             "average_time": round(exercise.total_time / total_questions, 2) if exercise.total_time else 0
         }
+
+    def get_student_exercise_stats(self, student_id: int) -> dict:
+        """获取学生的练习统计信息"""
+        # 基础统计
+        base_stats = self.db.query(
+            func.count(Exercise.id).label('total_exercises'),
+            func.count(Exercise.completed_at).label('completed_exercises'),
+            func.avg(Exercise.final_score).label('average_score'),
+            func.sum(Exercise.total_time).label('total_time')
+        ).filter(
+            Exercise.student_id == student_id
+        ).first()
+
+        # 计算正确率
+        questions_stats = self.db.query(
+            func.count(Question.id).label('total_questions'),
+            func.sum(case(
+                (Question.is_correct == True, 1),
+                else_=0
+            )).label('correct_answers')
+        ).join(Exercise).filter(
+            Exercise.student_id == student_id
+        ).first()
+
+        total_questions = questions_stats[0] or 0
+        correct_answers = questions_stats[1] or 0
+        accuracy_rate = round(
+            (correct_answers / total_questions * 100) if total_questions > 0 else 0, 
+            2
+        )
+
+        # 获取最近的成绩历史
+        score_history = self.db.query(
+            Exercise.completed_at,
+            Exercise.final_score
+        ).filter(
+            Exercise.student_id == student_id,
+            Exercise.completed_at.isnot(None)
+        ).order_by(desc(Exercise.completed_at)).limit(10).all()
+
+        return {
+            "total_exercises": base_stats[0] or 0,
+            "completed_exercises": base_stats[1] or 0,
+            "average_score": round(base_stats[2] or 0, 2),
+            "total_time": base_stats[3] or 0,
+            "accuracy_rate": accuracy_rate,  # 添加正确率
+            "score_history": [
+                {
+                    "date": completed_at.strftime("%Y-%m-%d"),
+                    "score": score
+                }
+                for completed_at, score in score_history
+            ]
+        }
+
+    def verify_exercise_access(self, exercise_id: int, student_id: int) -> bool:
+        """验证学生是否有权限访问该练习"""
+        exercise = self.get_exercise_with_questions(exercise_id)
+        return exercise is not None and exercise.student_id == student_id

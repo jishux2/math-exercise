@@ -5,6 +5,11 @@
 1. 题目模型（基础、创建、更新、响应）
 2. 练习模型（基础、创建、更新、响应）
 3. 练习统计和列表响应模型
+
+主要的数据流：
+1. 创建练习：ExerciseCreate -> Exercise(DB) -> ExerciseResponse
+2. 提交答案：QuestionUpdate -> Question(DB) -> QuestionResponse
+3. 查询统计：Exercise(DB) + Question(DB) -> ExerciseStats
 """
 
 from pydantic import BaseModel, Field, field_validator, ConfigDict
@@ -86,7 +91,7 @@ class ExerciseBase(BaseModel):
     difficulty: DifficultyLevel  # 难度等级
     number_range: Tuple[int, int] = Field(
         ...,
-        description="数值范围 [最小值, 最大值]"
+        description="数值范围[最小值, 最大值]"
     )
     operator_types: List[OperatorType]  # 允许使用的运算符
 
@@ -109,7 +114,7 @@ class ExerciseBase(BaseModel):
             ValueError: 当验证失败时抛出，错误信息会被Pydantic捕获并处理
         """
         if len(v) != 2:
-            raise ValueError('数值范围必须包含两个值 [min, max]')
+            raise ValueError('数值范围必须包含两个值[min, max]')
         if v[0] >= v[1]:
             raise ValueError('最小值必须小于最大值')
         return v
@@ -153,9 +158,15 @@ class ExerciseResponse(ExerciseBase):
     """练习响应模型
     
     完整的练习信息，包含所有题目
+    
+    数据流向：
+    1. 数据库Exercise模型 -> ExerciseResponse
+    2. ExerciseResponse -> JSON响应
+    3. JSON -> 前端展示
     """
     id: int                         # 练习ID
-    user_id: int                    # 用户ID
+    student_id: int                 # 学生ID，关联到Student模型
+                                   # 重构：从user_id改为student_id，直接关联到学生
     created_at: datetime            # 创建时间
     completed_at: Optional[datetime] = None  # 完成时间
     final_score: Optional[float] = None      # 最终得分
@@ -186,17 +197,6 @@ class ExerciseResponse(ExerciseBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ExerciseStats(BaseModel):
-    """练习统计信息模型"""
-    total_exercises: int            # 练习总数
-    completed_exercises: int        # 已完成练习数
-    average_score: float           # 平均分数
-    total_time: int                # 总用时
-    accuracy_rate: float           # 正确率
-    favorite_operator: OperatorType # 最常用运算符
-    best_difficulty: DifficultyLevel  # 最佳难度级别
-
-
 class ExerciseListResponse(BaseModel):
     """练习列表响应模型
     
@@ -213,5 +213,27 @@ class ExerciseFeedbackRequest(BaseModel):
     exercise_id: int  # 练习ID
     feedback_type: str = Field(
         ...,
-        description="反馈类型：'detailed' 或 'summary'"
+        description="反馈类型：'detailed'或'summary'"
     )
+
+
+class ExerciseStats(BaseModel):
+    """练习统计信息模型
+    
+    用于返回学生练习的统计数据，包括:
+    1. 总体情况：练习数、完成数、平均分等
+    2. 正确率统计：所有题目的正确率
+    3. 历史记录：最近练习的得分记录
+    
+    数据流向：
+    1. 从Exercise表统计基础数据
+    2. 从Question表计算正确率
+    3. 组合统计数据返回前端
+    """
+    total_exercises: int       # 练习总数
+    completed_exercises: int   # 已完成练习数
+    average_score: float      # 平均分数
+    accuracy_rate: float      # 正确率（所有题目的正确数/总题目数）
+    total_time: int          # 总用时（秒）
+    score_history: List[dict] # 历史练习记录，格式：
+                             # [{"date": "YYYY-MM-DD", "score": 85.5}, ...]

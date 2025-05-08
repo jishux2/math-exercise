@@ -3,11 +3,12 @@
 作用: 定义练习系统的数据模型，包括练习和题目的数据结构
 
 数据库关系说明：
-1. User <-> Exercise（一对多）：
-   - 外键：Exercise.user_id -> User.id
+1. Student <-> Exercise（一对多）：
+   - 外键：Exercise.student_id -> Student.id
    - 关系属性：
-     * User.exercises: 用户创建的所有练习列表
-     * Exercise.user: 练习所属的用户
+     * Student.exercises: 学生的所有练习列表
+     * Exercise.student: 练习所属的学生
+   - 重构说明：原先是与User关联，现在直接与Student关联，使关系更加明确
 
 2. Exercise <-> Question（一对多）：
    - 外键：Question.exercise_id -> Exercise.id
@@ -18,13 +19,13 @@
 SQLAlchemy relationship说明：
 1. 双向关系的行为：
    - Python对象级别：关系的两端会立即同步更新
-     比如设置exercise.user = user时：
-     * exercise.user指向user对象
-     * user.exercises列表会包含exercise对象
+     比如设置exercise.student = student时：
+     * exercise.student指向student对象
+     * student.exercises列表会包含exercise对象
    - 数据库级别：外键的更新要等到Session提交时才会同步
-   - 设置关系的两种等效方式（以User-Exercise为例）：
-     * exercise.user = user
-     * user.exercises.append(exercise)
+   - 设置关系的两种等效方式（以Student-Exercise为例）：
+     * exercise.student = student
+     * student.exercises.append(exercise)
 
 2. back_populates参数：
    - 用于建立双向关系，指定对方模型中的对应属性名
@@ -77,10 +78,11 @@ class Exercise(Base):
 
     # 练习的唯一标识符
     id = Column(Integer, primary_key=True, index=True)
-    # 外键字段：关联到用户表，表明此练习属于哪个用户
-    # 在数据库层面，外键字段在"多"的一方（即练习表），指向"一"的一方（即用户表）的id
-    # 这确保了一个练习必须属于一个用户，而一个用户可以有多个练习
-    user_id = Column(Integer, ForeignKey("users.id"))
+    # 外键字段：关联到学生表，表明此练习属于哪个学生
+    # 在数据库层面，外键字段在"多"的一方（即练习表），指向"一"的一方（即学生表）的id
+    # 这确保了一个练习必须属于一个学生，而一个学生可以有多个练习
+    # 重构说明：由原来关联user改为直接关联student，使关系更加明确
+    student_id = Column(Integer, ForeignKey("students.id"))
     # 练习难度级别
     difficulty = Column(SQLEnum(DifficultyLevel))
     # 数值范围，存储为JSON格式：[最小值, 最大值]
@@ -100,8 +102,9 @@ class Exercise(Base):
 
     # 练习包含的所有题目列表，对应Question模型中的exercise属性
     questions = relationship("Question", back_populates="exercise")
-    # 练习所属的用户，对应User模型中的exercises属性
-    user = relationship("User", back_populates="exercises")
+    # 练习所属的学生，对应Student模型中的exercises属性
+    # 通过这个关系可以直接访问学生的信息，如：exercise.student.grade
+    student = relationship("Student", back_populates="exercises")
 
     def to_response(self) -> "ExerciseResponse":
         """转换为响应模型"""

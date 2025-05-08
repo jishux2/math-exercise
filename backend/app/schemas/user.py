@@ -2,13 +2,13 @@
 作用：定义用户相关的数据模型
 
 包含：
-1. 用户基础、创建、更新、响应等模型
-2. 不同角色用户（学生、教师、家长、管理员）的专用模型
+1. 用户基础信息和更新模型
+2. 不同角色（学生、教师、家长、管理员）的创建和配置模型
 3. 用户认证相关的Token模型
 """
 
 from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from ..models.user import UserRole
 
@@ -18,9 +18,8 @@ class UserBase(BaseModel):
     
     包含用户的基本信息字段，所有用户类型共用的属性
     """
-    email: EmailStr                               # EmailStr是Pydantic提供的邮箱字段类型，会自动验证邮箱格式
-    username: str                                 # 用户名
-    role: Optional[UserRole] = UserRole.STUDENT   # 用户角色，默认为学生
+    email: EmailStr    # EmailStr是Pydantic提供的邮箱字段类型，会自动验证邮箱格式
+    username: str      # 用户名
 
     @field_validator('username')
     def username_must_be_valid(cls, v):
@@ -35,21 +34,13 @@ class UserBase(BaseModel):
             raise ValueError('用户名不能超过20个字符')
         return v
 
-class StudentInfo(BaseModel):
-    """学生特有信息模型
-    
-    包含只有学生角色才需要的额外信息
-    """
-    grade: str        # 年级
-    class_name: str   # 班级
 
-class UserCreate(UserBase):
-    """用户创建模型
+class UserCreateBase(UserBase):
+    """用户创建基础模型
     
-    继承基础模型，添加密码字段和学生信息字段
+    所有角色创建模型的基类，包含基本的创建字段
     """
-    password: str                                 # 密码
-    student_info: Optional[StudentInfo] = None    # 学生特有信息，仅当role为STUDENT时使用
+    password: str
 
     @field_validator('password')
     def password_must_be_strong(cls, v):
@@ -62,38 +53,15 @@ class UserCreate(UserBase):
             raise ValueError('密码至少需要6个字符')
         return v
 
-class TeacherCreate(UserCreate):
-    """教师用户创建模型
-    
-    继承用户创建模型，添加教师特有字段
-    """
-    role: UserRole = UserRole.TEACHER  # 固定角色为教师
-    subjects: List[str]                # 教授科目列表
-
-class ParentCreate(UserCreate):
-    """家长用户创建模型
-    
-    继承用户创建模型，添加家长特有字段
-    """
-    role: UserRole = UserRole.PARENT   # 固定角色为家长
-    student_emails: List[str]          # 关联的学生邮箱列表
-
-class AdminCreate(UserCreate):
-    """管理员用户创建模型
-    
-    继承用户创建模型，固定角色为管理员
-    """
-    role: UserRole = UserRole.ADMIN    # 固定角色为管理员
 
 class UserUpdate(BaseModel):
     """用户更新模型
     
-    所有字段都是可选的，允许部分更新
+    所有字段都是可选的，允许部分更新用户基本信息
     """
-    email: Optional[EmailStr] = None           # 可选的邮箱更新
-    username: Optional[str] = None             # 可选的用户名更新
-    password: Optional[str] = None             # 可选的密码更新
-    student_info: Optional[StudentInfo] = None # 可选的学生信息更新
+    email: Optional[EmailStr] = None      # 可选的邮箱更新
+    username: Optional[str] = None        # 可选的用户名更新
+    password: Optional[str] = None        # 可选的密码更新
 
     @field_validator('username')
     def username_must_be_valid(cls, v):
@@ -120,6 +88,7 @@ class UserUpdate(BaseModel):
             raise ValueError('密码至少需要6个字符')
         return v
 
+
 class UserInDB(UserBase):
     """数据库用户模型
     
@@ -132,27 +101,70 @@ class UserInDB(UserBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-class StudentResponse(BaseModel):
-    """学生信息响应模型
-    
-    用于向前端返回学生特有的信息
-    """
-    id: int                               # 学生ID
-    grade: str                           # 年级
-    class_name: str                      # 班级
-    teacher_name: Optional[str] = None   # 教师姓名（如果有）
-    parent_name: Optional[str] = None    # 家长姓名（如果有）
 
-    model_config = ConfigDict(from_attributes=True)
+class StudentProfile(BaseModel):
+    """学生个人配置模型
+    
+    定义学生特有的配置信息
+    """
+    grade: str        # 年级
+    class_name: str   # 班级
+
+
+class TeacherProfile(BaseModel):
+    """教师个人配置模型
+    
+    定义教师特有的配置信息
+    """
+    subjects: List[str]  # 教授科目列表
+
+
+class StudentCreate(UserCreateBase):
+    """学生创建模型
+    
+    用于创建学生用户，包含基本信息、密码和学生特有配置
+    """
+    role: UserRole = UserRole.STUDENT    # 固定角色为学生
+    profile: StudentProfile              # 学生配置信息
+
+
+class TeacherCreate(UserCreateBase):
+    """教师创建模型
+    
+    用于创建教师用户，包含基本信息、密码和教师特有配置
+    """
+    role: UserRole = UserRole.TEACHER    # 固定角色为教师
+    profile: TeacherProfile             # 教师配置信息
+
+
+class ParentCreate(UserCreateBase):
+    """家长创建模型
+    
+    用于创建家长用户，包含基本信息、密码和关联的学生列表
+    """
+    role: UserRole = UserRole.PARENT     # 固定角色为家长
+    student_emails: List[str]            # 关联的学生邮箱列表
+
+
+class AdminCreate(UserCreateBase):
+    """管理员创建模型
+    
+    用于创建管理员用户，包含基本信息、密码和特殊权限配置
+    """
+    role: UserRole = UserRole.ADMIN      # 固定角色为管理员
+    permissions: List[str] = []          # 特殊权限列表
+
 
 class UserResponse(UserInDB):
     """用户响应模型
     
-    用于向前端返回用户信息，包含统计信息和额外字段
+    用于向前端返回用户信息，包含基本信息和角色特有信息
     """
-    exercise_count: Optional[int] = None        # 练习总数
-    average_score: Optional[float] = None       # 平均分数
-    student_info: Optional[StudentResponse] = None  # 学生信息（仅当用户是学生时）
+    student_profile: Optional[StudentProfile] = None  # 学生配置（仅当用户是学生时）
+    teacher_profile: Optional[TeacherProfile] = None  # 教师配置（仅当用户是教师时）
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class Token(BaseModel):
     """JWT令牌模型
@@ -162,6 +174,7 @@ class Token(BaseModel):
     access_token: str           # 访问令牌
     token_type: str = "bearer"  # 令牌类型，固定为"bearer"
 
+
 class TokenPayload(BaseModel):
     """令牌载荷模型
     
@@ -169,3 +182,57 @@ class TokenPayload(BaseModel):
     """
     sub: str       # 主题（用户ID）
     exp: datetime  # 过期时间
+
+
+class StudentProgress(BaseModel):
+    """学生进度模型
+    
+    用于返回学生的学习进度和统计信息
+    """
+    # 基础统计
+    total_exercises: int          # 练习总数
+    completed_exercises: int      # 已完成练习数
+    average_score: float         # 平均分数
+    total_time: int              # 总用时（秒）
+
+    # 最近练习记录
+    recent_exercises: List[Dict[str, Any]] = []  # 最近的练习记录列表
+
+    # 按难度级别的统计
+    difficulty_stats: Dict[str, Dict[str, Any]] = {}  # 各难度级别的统计信息
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "total_exercises": 50,
+                "completed_exercises": 45,
+                "average_score": 85.5,
+                "total_time": 3600,
+                "recent_exercises": [
+                    {
+                        "id": 1,
+                        "date": "2025-05-05 14:30",
+                        "difficulty": "简单",
+                        "score": 90,
+                        "time_spent": 300
+                    }
+                ],
+                "difficulty_stats": {
+                    "简单": {
+                        "count": 20,
+                        "completed": 18,
+                        "average_score": 92.5
+                    },
+                    "中等": {
+                        "count": 20,
+                        "completed": 17,
+                        "average_score": 85.0
+                    },
+                    "困难": {
+                        "count": 10,
+                        "completed": 10,
+                        "average_score": 78.5
+                    }
+                }
+            }
+        }

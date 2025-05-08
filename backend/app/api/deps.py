@@ -50,8 +50,10 @@ from fastapi.security import OAuth2PasswordBearer
 # 2. 在Swagger UI中提供用户名密码的认证表单
 # 3. 提供统一的token检查机制
 
-from jose import jwt
-# jwt：用于JWT令牌的编码和解码
+from jose import jwt, JWTError
+# JWT相关组件：
+# - jwt：用于JWT令牌的编码和解码
+# - JWTError：token验证失败异常
 
 from sqlalchemy.orm import Session
 # Session：SQLAlchemy会话类，用于数据库操作
@@ -112,8 +114,14 @@ def get_current_user(
     
     这个函数用于：
     1. 从请求中获取并验证JWT token
-    2. 解析token获取用户信息
+    2. 解析token获取用户信息并验证是否过期
     3. 从数据库获取完整的用户信息
+    
+    Token验证过程：
+    1. 首先验证token的签名是否有效
+    2. 检查token是否过期（通过exp字段）
+    3. 解析payload获取用户ID
+    4. 根据用户ID查询数据库
     
     Args:
         db (Session): 数据库会话，由get_db依赖提供
@@ -123,7 +131,10 @@ def get_current_user(
         User: 当前登录的用户对象
     
     Raises:
-        HTTPException: 当token无效或用户不存在时抛出401错误
+        HTTPException: 返回401状态码，表示认证失败。可能的原因：
+            - token无效或签名错误
+            - token已过期
+            - 用户不存在
     """
     # 定义认证失败时抛出的异常
     credentials_exception = HTTPException(
@@ -137,6 +148,10 @@ def get_current_user(
         print(f"Verifying token: {token}")
         
         # 解码和验证JWT token
+        # python-jose会自动验证：
+        # 1. token的签名是否正确
+        # 2. exp(过期时间)是否已过期
+        # 3. token的格式是否正确
         payload = jwt.decode(
             token,                   # 要解码的token
             settings.SECRET_KEY,     # 用于验证签名的密钥
@@ -145,6 +160,9 @@ def get_current_user(
         print(f"Token payload: {payload}")
         
         # 将解码后的数据转换为TokenPayload对象
+        # TokenPayload包含：
+        # - sub: 用户ID
+        # - exp: 过期时间戳
         token_data = TokenPayload(**payload)
         
         # 将字符串ID转换回整数
@@ -158,10 +176,13 @@ def get_current_user(
             
         return user
         
-    except Exception as e:
-        # 添加错误日志
+    except JWTError as e:
+        # token无效（包括过期、签名错误等所有JWT相关错误）
         print(f"Token verification failed: {str(e)}")
-        # 任何验证失败都抛出相同的异常
+        raise credentials_exception
+    except Exception as e:
+        # 其他未预期的错误
+        print(f"Unexpected error: {str(e)}")
         raise credentials_exception
 
 def get_current_active_user(
@@ -219,4 +240,5 @@ check_student = check_roles([UserRole.STUDENT])
 check_teacher = check_roles([UserRole.TEACHER])
 check_parent = check_roles([UserRole.PARENT])
 check_admin = check_roles([UserRole.ADMIN])
+check_parent_or_admin = check_roles([UserRole.PARENT, UserRole.ADMIN])
 check_teacher_or_admin = check_roles([UserRole.TEACHER, UserRole.ADMIN])

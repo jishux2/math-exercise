@@ -4,7 +4,7 @@
       它会生成一个带时间戳的日志文件，记录：
       1. 数据库中所有表的结构信息（表名、列、主键、外键等）
       2. 各个表中的实际数据内容
-      3. 数据库整体统计信息（用户分布、练习完成情况等）
+      3. 数据库整体统计信息（用户角色分布、练习完成情况等）
       日志文件保存在logs目录下，便于后续查看和分析。
 """
 
@@ -15,7 +15,10 @@ from datetime import datetime  # 用于处理日期和时间
 # 导入SQLAlchemy相关组件
 from sqlalchemy import inspect  # 用于检查数据库结构
 from app.database import engine, SessionLocal  # 导入数据库引擎和会话工厂
-from app.models import User, Student, Exercise, Question, UserRole  # 导入数据模型
+from app.models import (  # 导入数据模型
+    User, Student, Teacher, Parent, Admin,  # 用户及角色模型
+    Exercise, Question, UserRole  # 练习相关模型和枚举
+)
 
 def write_database_info(file):
     """
@@ -67,8 +70,8 @@ def write_table_data(file):
     将表中的实际数据写入指定文件
     
     包含以下表的数据：
-    - 用户表（基本信息、角色、状态）
-    - 学生信息表（年级、班级、关联关系）
+    - 用户表（基本信息、角色）
+    - 角色表（学生、教师、家长、管理员）
     - 练习表（难度、范围、得分、时间）
     - 题目表（内容、答案、用时、正确性）
     
@@ -78,9 +81,9 @@ def write_table_data(file):
     # 创建数据库会话
     db = SessionLocal()
     try:
-        # 写入用户表数据
-        file.write("\n=== 用户数据 ===\n")
-        users = db.query(User).all()  # 查询所有用户
+        # 写入用户基础数据
+        file.write("\n=== 用户基础数据 ===\n")
+        users = db.query(User).all()
         for user in users:
             file.write(f"用户ID: {user.id}\n")
             file.write(f"邮箱: {user.email}\n")
@@ -88,27 +91,64 @@ def write_table_data(file):
             file.write(f"角色: {user.role.value}\n")
             file.write(f"是否活跃: {user.is_active}\n")
             file.write(f"创建时间: {user.created_at}\n")
-            file.write("---\n")  # 分隔符
+            file.write("---\n")
 
-        # 写入学生信息表数据
-        file.write("\n=== 学生信息数据 ===\n")
+        # 写入学生数据
+        file.write("\n=== 学生数据 ===\n")
         students = db.query(Student).all()
         for student in students:
-            file.write(f"ID: {student.id}\n")
+            file.write(f"学生ID: {student.id}\n")
             file.write(f"用户ID: {student.user_id}\n")
-            file.write(f"教师ID: {student.teacher_id}\n")
-            file.write(f"家长ID: {student.parent_id}\n")
             file.write(f"年级: {student.grade}\n")
             file.write(f"班级: {student.class_name}\n")
+            file.write(f"教师ID: {student.teacher_id}\n")
+            file.write(f"家长ID: {student.parent_id}\n")
             file.write(f"创建时间: {student.created_at}\n")
-            file.write("---\n")  # 分隔符
+            
+            # 统计练习信息
+            exercises = student.exercises
+            completed = sum(1 for e in exercises if e.completed_at)
+            file.write(f"练习总数: {len(exercises)}\n")
+            file.write(f"已完成练习: {completed}\n")
+            file.write("---\n")
 
-        # 写入练习表数据，包含练习的完整信息
+        # 写入教师数据
+        file.write("\n=== 教师数据 ===\n")
+        teachers = db.query(Teacher).all()
+        for teacher in teachers:
+            file.write(f"教师ID: {teacher.id}\n")
+            file.write(f"用户ID: {teacher.user_id}\n")
+            file.write(f"教授科目: {teacher.subjects}\n")
+            file.write(f"学生数量: {len(teacher.students)}\n")
+            file.write(f"创建时间: {teacher.created_at}\n")
+            file.write("---\n")
+
+        # 写入家长数据
+        file.write("\n=== 家长数据 ===\n")
+        parents = db.query(Parent).all()
+        for parent in parents:
+            file.write(f"家长ID: {parent.id}\n")
+            file.write(f"用户ID: {parent.user_id}\n")
+            file.write(f"关联学生数: {len(parent.students)}\n")
+            file.write(f"创建时间: {parent.created_at}\n")
+            file.write("---\n")
+
+        # 写入管理员数据
+        file.write("\n=== 管理员数据 ===\n")
+        admins = db.query(Admin).all()
+        for admin in admins:
+            file.write(f"管理员ID: {admin.id}\n")
+            file.write(f"用户ID: {admin.user_id}\n")
+            file.write(f"权限配置: {admin.permissions}\n")
+            file.write(f"创建时间: {admin.created_at}\n")
+            file.write("---\n")
+
+        # 写入练习数据
         file.write("\n=== 练习数据 ===\n")
-        exercises = db.query(Exercise).all()  # 查询所有练习
+        exercises = db.query(Exercise).all()
         for exercise in exercises:
             file.write(f"练习ID: {exercise.id}\n")
-            file.write(f"用户ID: {exercise.user_id}\n")
+            file.write(f"学生ID: {exercise.student_id}\n")  # 改为student_id
             file.write(f"难度: {exercise.difficulty.value}\n")
             file.write(f"数值范围: {exercise.number_range}\n")
             file.write(f"运算符: {exercise.operator_types}\n")
@@ -144,18 +184,16 @@ def write_statistics(file):
     
     包含以下统计数据：
     - 用户总数及各角色分布
-    - 练习总数和完成情况
-    - 题目总数
-    
-    Args:
-        file: 要写入的文件对象
+    - 各角色关联统计
+    - 练习完成情况
+    - 题目统计
     """
     # 创建数据库会话
     db = SessionLocal()
     try:
         file.write("\n=== 统计信息 ===\n")
         
-        # 统计用户信息
+        # 基础用户统计
         total_users = db.query(User).count()
         users_by_role = {}
         for role in UserRole:
@@ -167,14 +205,41 @@ def write_statistics(file):
         for role, count in users_by_role.items():
             file.write(f"  - {role}: {count}\n")
         
-        # 统计练习和题目信息
+        # 角色关联统计
+        file.write("\n角色关联统计:\n")
+        # 教师-学生关系
+        teachers = db.query(Teacher).all()
+        total_teacher_student_links = sum(len(t.students) for t in teachers)
+        file.write(f"教师-学生关联总数: {total_teacher_student_links}\n")
+        # 家长-学生关系
+        parents = db.query(Parent).all()
+        total_parent_student_links = sum(len(p.students) for p in parents)
+        file.write(f"家长-学生关联总数: {total_parent_student_links}\n")
+        
+        # 练习统计
         total_exercises = db.query(Exercise).count()
-        completed_exercises = db.query(Exercise).filter(Exercise.completed_at.isnot(None)).count()
+        completed_exercises = db.query(Exercise).filter(
+            Exercise.completed_at.isnot(None)
+        ).count()
         total_questions = db.query(Question).count()
         
-        file.write(f"\n总练习数: {total_exercises}\n")
+        file.write(f"\n练习统计:\n")
+        file.write(f"总练习数: {total_exercises}\n")
         file.write(f"已完成练习数: {completed_exercises}\n")
         file.write(f"总题目数: {total_questions}\n")
+        
+        # 计算正确率
+        answered_questions = db.query(Question).filter(
+            Question.user_answer.isnot(None)
+        ).count()
+        correct_questions = db.query(Question).filter(
+            Question.is_correct == True
+        ).count()
+        accuracy_rate = (
+            round(correct_questions / answered_questions * 100, 2)
+            if answered_questions > 0 else 0
+        )
+        file.write(f"题目正确率: {accuracy_rate}%\n")
         
     finally:
         # 确保会话被关闭
