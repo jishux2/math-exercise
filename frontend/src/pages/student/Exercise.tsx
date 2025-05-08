@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { exercises, ai } from '../api';
-import AISettingsDialog from '../components/AISettingsDialog';
-import AIFeedbackPreview from '../components/AIFeedbackPreview';
+import { exercises, ai } from '../../api';
+import AISettingsDialog from '../../components/AISettingsDialog';
+import AIFeedbackPreview from '../../components/AIFeedbackPreview';
 
 const Exercise = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,7 +36,7 @@ const Exercise = () => {
     if (!exercise || !answer) return;
   
     const question = exercise.questions[currentQuestionIndex];
-    const timeSpent = Math.round((Date.now() - startTime) / 1000);
+    const timeSpent = Math.max(1, Math.round((Date.now() - startTime) / 1000));  // 确保至少为1秒
   
     try {
       await exercises.submitAnswer(exercise.id, question.id, {
@@ -62,7 +62,7 @@ const Exercise = () => {
         }
         
         // 完成后跳转到结果页面
-        // navigate(`/result/${exercise.id}`);
+        navigate(`/student/result/${exercise.id}`);  // 添加/student前缀
       }
     } catch (error) {
       console.error('Failed to submit answer:', error);

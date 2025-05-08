@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { exercises } from '../api';
+import { exercises } from '../../api';
 
 const CreateExercise = () => {
   const navigate = useNavigate();
@@ -25,7 +25,7 @@ const CreateExercise = () => {
 
     try {
       const exercise = await exercises.create(formData);
-      navigate(`/exercise/${exercise.id}`);
+      navigate(`/student/exercise/${exercise.id}`);  // 添加/student前缀
     } catch (err: any) {
       setError(
         err.response?.data?.detail?.[0]?.msg || 

@@ -1,4 +1,6 @@
 import axios, { AxiosError } from 'axios';
+import { LoginResponse, User, UserRole } from './types';
+import { ExerciseListResponse, ExerciseStats } from './types';
 
 const BASE_URL = 'http://localhost:8000/api/v1';
 
@@ -35,18 +37,71 @@ api.interceptors.response.use(
 );
 
 export const auth = {
-  login: async (email: string, password: string) => {
-    const formData = new FormData();
-    formData.append('username', email);  // OAuth2 uses username field for email
-    formData.append('password', password);
-    const response = await api.post('/auth/login', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',  // 重要！登录接口需要这个
-      },
-    });
-    return response.data;
-  },
-};
+    login: async (email: string, password: string): Promise<LoginResponse> => {
+      const formData = new FormData();
+      formData.append('username', email);
+      formData.append('password', password);
+      const response = await api.post('/auth/login', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    },
+  
+    getCurrentUser: async (): Promise<User> => {
+      const response = await api.get('/users/me');
+      return response.data;
+    },
+  };
+  
+  export const users = {
+    createStudent: async (data: {
+      email: string;
+      username: string;
+      password: string;
+      profile: {
+        grade: string;
+        class_name: string;
+      };
+    }) => {
+      const response = await api.post('/users', {
+        ...data,
+        role: UserRole.STUDENT,
+      });
+      return response.data;
+    },
+  
+    createTeacher: async (data: {
+      email: string;
+      username: string;
+      password: string;
+      subjects: string[];
+    }) => {
+      const response = await api.post('/users/teachers', data);
+      return response.data;
+    },
+  
+    createParent: async (data: {
+      email: string;
+      username: string;
+      password: string;
+      student_emails: string[];
+    }) => {
+      const response = await api.post('/users/parents', data);
+      return response.data;
+    },
+  
+    getTeacherStudents: async () => {
+      const response = await api.get('/users/teachers/students');
+      return response.data;
+    },
+  
+    getParentStudents: async () => {
+      const response = await api.get('/users/parents/students');
+      return response.data;
+    },
+  };
 
 export const exercises = {
   create: async (data: any) => {
@@ -69,6 +124,24 @@ export const exercises = {
   
   complete: async (id: number) => {
     const response = await api.post(`/exercises/${id}/complete`);
+    return response.data;
+  },
+
+  getList: async (params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<ExerciseListResponse> => {
+    const response = await api.get('/exercises/list', { 
+      params: {
+        skip: params?.page ? params.page * (params.limit || 10) : 0,  // 将page转换为skip
+        limit: params?.limit || 10
+      }
+    });
+    return response.data;
+  },
+
+  getStats: async (): Promise<ExerciseStats> => {
+    const response = await api.get('/exercises/stats');
     return response.data;
   },
 };

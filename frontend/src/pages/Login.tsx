@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useLocation, useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -9,9 +8,6 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const { login } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const from = (location.state as any)?.from?.pathname || '/create-exercise';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,9 +18,13 @@ const Login = () => {
 
     try {
       await login(email, password);
-      navigate(from, { replace: true });
+      // 不需要手动导航，AuthContext会处理重定向
     } catch (err: any) {
-      setError(err.message || '登录失败，请检查邮箱和密码');
+      setError(
+        err.response?.data?.detail || 
+        err.message || 
+        '登录失败，请检查邮箱和密码'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -37,43 +37,63 @@ const Login = () => {
           <h2 className="text-center text-3xl font-extrabold text-gray-900">
             登录
           </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            请使用你的账号登录系统
+          </p>
         </div>
+        
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
             <div className="text-red-500 text-center text-sm bg-red-50 p-2 rounded">
               {error}
             </div>
           )}
-          <div className="space-y-4">
+          
+          <div className="rounded-md shadow-sm space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">邮箱</label>
+              <label htmlFor="email" className="sr-only">
+                邮箱
+              </label>
               <input
+                id="email"
+                name="email"
                 type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="邮箱地址"
               />
             </div>
+            
             <div>
-              <label className="text-sm font-medium text-gray-700">密码</label>
+              <label htmlFor="password" className="sr-only">
+                密码
+              </label>
               <input
+                id="password"
+                name="password"
                 type="password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="密码"
               />
             </div>
           </div>
+
           <div>
             <button
               type="submit"
               disabled={isLoading}
               className={`
-                w-full flex justify-center py-2 px-4 border border-transparent rounded-md 
-                shadow-sm text-sm font-medium text-white bg-indigo-600 
-                ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-700'}
+                group relative w-full flex justify-center py-2 px-4 border border-transparent 
+                text-sm font-medium rounded-md text-white 
+                ${isLoading 
+                  ? 'bg-indigo-400 cursor-not-allowed' 
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+                }
                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
               `}
             >

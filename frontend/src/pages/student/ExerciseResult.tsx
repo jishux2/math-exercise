@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { exercises } from '../api';
-import AIFeedbackPreview from '../components/AIFeedbackPreview';
+import { exercises } from '../../api';
+import AIFeedbackPreview from '../../components/AIFeedbackPreview';
 
 interface Question {
   id: number;
@@ -141,7 +141,7 @@ const ExerciseResult = () => {
       {/* 底部按钮 */}
       <div className="mt-8 flex justify-center space-x-4">
         <button
-          onClick={() => navigate('/create-exercise')}
+          onClick={() => navigate('/student/create-exercise')}  // 修改这里
           className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
         >
           再来一组
