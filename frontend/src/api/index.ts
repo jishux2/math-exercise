@@ -170,6 +170,18 @@ export const ai = {
         }
       );
 
+      // 检查响应状态
+      if (!response.ok) {
+        // 尝试解析错误响应
+        const errorData = await response.json();
+        throw {
+          response: {
+            status: response.status,
+            data: errorData
+          }
+        };
+      }
+
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
 

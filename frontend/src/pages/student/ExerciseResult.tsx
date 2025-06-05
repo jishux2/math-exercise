@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { exercises } from '../../api';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';  // 添加useLocation
+import { exercises, ai } from '../../api';
 import AIFeedbackPreview from '../../components/AIFeedbackPreview';
+import { Loader2, MessageSquarePlus } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Question {
   id: number;
@@ -23,27 +26,80 @@ interface Exercise {
 
 const ExerciseResult = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();  // 获取location
   const navigate = useNavigate();
+
+  // 从location.state中获取AI启用状态
+  const shouldGenerateAI = location.state?.shouldGenerateAI;
+
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [showAIFeedback, setShowAIFeedback] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // 将error重命名为更具体的名称
+  const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [aiFeedbackError, setAiFeedbackError] = useState<string | null>(null);
+  const [aiFeedback, setAIFeedback] = useState<string>('');
+  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
+  // 将getFeedback移到useEffect外部，并使用useCallback
+  const getFeedback = async (exerciseId: number) => {
+    if (isGeneratingFeedback) return;
+    
+    setIsGeneratingFeedback(true);
+    setAiFeedbackError(null);  // 清除之前的AI反馈错误
+    let feedback = '';
+
+    try {
+      await ai.getFeedback(
+        exerciseId,
+        'detailed',
+        (chunk) => {
+          feedback += chunk;
+          setAIFeedback(feedback);
+        },
+        (error) => {
+          console.log('Error occurred:', error); // 添加调试日志
+          const errorMessage = error.response?.data?.error || error.message || '获取AI反馈失败';
+          setAiFeedbackError(errorMessage);  // 使用aiFeedbackError
+        }
+      );
+    } finally {
+      setIsGeneratingFeedback(false);
+    }
+  };
+
+  // 加载练习数据和处理AI反馈
   useEffect(() => {
     const loadExercise = async () => {
+      if (!id) return;
+      
+      setLoading(true);
       try {
-        const data = await exercises.getExercise(parseInt(id!));
+        const data = await exercises.getExercise(parseInt(id));
         setExercise(data);
+        
+        if (data.ai_feedback) {
+          setAIFeedback(data.ai_feedback);
+        } else if (shouldGenerateAI) {
+          getFeedback(parseInt(id));
+        }
       } catch (error) {
-        setError('加载练习结果失败');
+        setLoadingError('加载练习结果失败');  // 使用loadingError
         console.error('Failed to load exercise:', error);
       } finally {
         setLoading(false);
       }
     };
-    loadExercise();
-  }, [id]);
 
+    loadExercise();
+  }, [id, shouldGenerateAI]);  // 添加shouldGenerateAI到依赖数组
+
+  // 判断是否需要显示"生成AI点评"按钮
+  // 只有当没有正在生成、没有现有反馈、没有错误、且不是自动生成模式时才显示
+  const shouldShowGenerateButton = !isGeneratingFeedback && 
+                                 !aiFeedback && 
+                                 !shouldGenerateAI;
+  
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -52,11 +108,12 @@ const ExerciseResult = () => {
     );
   }
 
-  if (error || !exercise) {
+  // 只有在加载失败时显示错误页面
+  if (loadingError || !exercise) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <div className="bg-red-50 border-l-4 border-red-400 p-4 text-red-700">
-          {error || '练习不存在'}
+          {loadingError || '练习不存在'}
         </div>
       </div>
     );
@@ -118,25 +175,61 @@ const ExerciseResult = () => {
         </div>
       </div>
 
-      {/* AI点评 */}
-      {exercise.ai_feedback && (
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">AI点评</h2>
+      {/* AI点评部分 */}
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">AI点评</h2>
+          {aiFeedback && (
             <button
               onClick={() => setShowAIFeedback(true)}
               className="text-blue-500 hover:text-blue-700"
             >
               查看完整评价
             </button>
-          </div>
-          <div className="prose max-w-none">
-            {exercise.ai_feedback.split('\n').map((line, index) => (
-              <p key={index}>{line}</p>
-            ))}
-          </div>
+          )}
         </div>
-      )}
+        
+        {isGeneratingFeedback && !aiFeedback ? (
+          // 只在生成中且还没有任何内容时显示加载动画
+          <div className="flex items-center justify-center py-8 text-gray-500">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" />
+            <span>正在生成AI点评...</span>
+          </div>
+        ) : aiFeedback ? (
+          // 使用ReactMarkdown来渲染内容
+          <div className="prose max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {aiFeedback}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+            <p className="mb-4">暂无AI点评</p>
+            {shouldShowGenerateButton && (
+              <>
+                <button
+                  onClick={() => getFeedback(parseInt(id!))}
+                  className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg
+                    hover:bg-blue-600 transition-colors duration-200"
+                >
+                  <MessageSquarePlus className="w-5 h-5 mr-2" />
+                  生成AI点评
+                </button>
+                {aiFeedbackError && (
+                  <div className="mt-4 text-center">
+                    <p className="text-red-500 mb-2">{aiFeedbackError}</p>
+                    {aiFeedbackError === "AI服务未初始化，请先配置token" && (
+                      <p className="text-gray-500 text-sm">
+                        提示：创建新练习时可以通过右上角的AI开关配置并启用AI服务
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* 底部按钮 */}
       <div className="mt-8 flex justify-center space-x-4">
@@ -155,9 +248,9 @@ const ExerciseResult = () => {
       </div>
 
       {/* AI反馈预览对话框 */}
-      {showAIFeedback && exercise.ai_feedback && (
+      {showAIFeedback && aiFeedback && (
         <AIFeedbackPreview
-          content={exercise.ai_feedback}
+          content={aiFeedback}
           onClose={() => setShowAIFeedback(false)}
         />
       )}

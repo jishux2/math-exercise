@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';  // 添加useRef
 import { useParams, useNavigate } from 'react-router-dom';
 import { exercises, ai } from '../../api';
 import AISettingsDialog from '../../components/AISettingsDialog';
-import AIFeedbackPreview from '../../components/AIFeedbackPreview';
 import AIControl from '../../components/AIControl';
 import toast from 'react-hot-toast';
 
 const Exercise = () => {
+  const aiButtonRef = useRef<HTMLDivElement>(null);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [exercise, setExercise] = useState<any>(null);
@@ -17,9 +17,6 @@ const Exercise = () => {
   // AI相关状态
   const [isAIEnabled, setIsAIEnabled] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [aiFeedback, setAIFeedback] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [isAILoading, setIsAILoading] = useState(false);
 
   useEffect(() => {
@@ -54,18 +51,9 @@ const Exercise = () => {
       } else {
         // 完成练习
         await exercises.complete(exercise.id);
-        
-        // 如果启用了AI点评，获取反馈但不立即跳转
-        if (isAIEnabled) {
-          try {
-            await getFeedback();
-          } catch (error) {
-            console.error('AI feedback failed:', error);
-          }
-        }
-        
-        // 完成后跳转到结果页面
-        // navigate(`/student/result/${exercise.id}`);  // 添加/student前缀
+        navigate(`/student/result/${exercise.id}`, {
+          state: { shouldGenerateAI: isAIEnabled }
+        });
       }
     } catch (error) {
       console.error('Failed to submit answer:', error);
@@ -73,17 +61,11 @@ const Exercise = () => {
   };
 
   // AI相关函数
-  const handleAIToggle = async () => {
-    if (!isAIEnabled && !isAILoading) {
-      setIsAILoading(true);
-      try {
-        setIsSettingsOpen(true);
-      } finally {
-        setIsAILoading(false);
-      }
-    } else if (isAIEnabled) {
+  const handleAIToggle = () => {
+    if (!isAIEnabled) {
+      setIsSettingsOpen(true);
+    } else {
       setIsAIEnabled(false);
-      setAIFeedback('');
     }
   };
 
@@ -107,31 +89,6 @@ const Exercise = () => {
     }
   };
 
-  const getFeedback = async () => {
-    if (!isAIEnabled || isGenerating) return;
-    
-    setIsGenerating(true);
-    setAIFeedback('');
-    let feedback = '';
-
-    try {
-      await ai.getFeedback(
-        parseInt(id!),
-        'detailed',
-        (chunk) => {
-          feedback += chunk;
-          setAIFeedback(feedback);
-        },
-        (error) => {
-          console.error('AI feedback error:', error);
-          alert('获取AI反馈失败');
-        }
-      );
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   if (!exercise) return <div>Loading...</div>;
 
   const currentQuestion = exercise.questions[currentQuestionIndex];
@@ -143,11 +100,13 @@ const Exercise = () => {
         <div className="text-lg font-semibold">
           题目 {currentQuestionIndex + 1} / {exercise.questions.length}
         </div>
-        <AIControl
-          enabled={isAIEnabled}
-          loading={isAILoading}
-          onToggle={handleAIToggle}
-        />
+        <div ref={aiButtonRef}>  {/* 在这里添加ref */}
+          <AIControl
+            enabled={isAIEnabled}
+            loading={isAILoading}
+            onToggle={handleAIToggle}
+          />
+        </div>
       </div>
 
       {/* 题目内容 */}
@@ -173,36 +132,13 @@ const Exercise = () => {
         </button>
       </div>
 
-      {/* AI反馈区域 */}
-      {aiFeedback && (
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-medium">AI点评</h3>
-            <button
-              onClick={() => setShowPreview(true)}
-              className="text-blue-500 hover:text-blue-700"
-            >
-              查看完整评价
-            </button>
-          </div>
-          <div className="text-gray-600 line-clamp-3">{aiFeedback}</div>
-        </div>
-      )}
-
       {/* AI设置对话框 */}
       <AISettingsDialog
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onSubmit={handleSettingsSubmit}
+        buttonRef={aiButtonRef}
       />
-
-      {/* AI反馈预览 */}
-      {showPreview && (
-        <AIFeedbackPreview
-          content={aiFeedback}
-          onClose={() => setShowPreview(false)}
-        />
-      )}
     </div>
   );
 };
