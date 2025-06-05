@@ -213,3 +213,16 @@ class ExerciseService(BaseService[Exercise, schemas.ExerciseCreate, schemas.Exer
         """验证学生是否有权限访问该练习"""
         exercise = self.get_exercise_with_questions(exercise_id)
         return exercise is not None and exercise.student_id == student_id
+    
+    def save_feedback(self, exercise_id: int, feedback: str) -> bool:
+        """保存练习的AI反馈"""
+        try:
+            exercise = self.get(exercise_id)
+            if not exercise:
+                return False
+            exercise.ai_feedback = feedback
+            self.db.commit()
+            return True
+        except Exception as e:
+            print(f"保存反馈失败: {str(e)}")
+            return False

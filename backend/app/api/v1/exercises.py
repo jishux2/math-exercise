@@ -10,6 +10,7 @@ from ...services import ExerciseService, AIService
 from ...schemas import exercise as schemas
 from ...models import User, Exercise
 from ..deps import check_student, check_teacher, check_parent, check_admin, check_teacher_or_admin
+from app.database import SessionLocal  # 导入数据库引擎和会话工厂
 
 router = APIRouter()
 
@@ -160,6 +161,9 @@ async def get_ai_feedback(
             content={"error": "AI服务未初始化，请先配置token"}
         )
 
+    # 在生成器函数外准备数据
+    complete_feedback = []  # 用于收集完整的反馈内容
+
     async def generate():
         try:
             # 确保在数据库会话中获取完整的练习数据
@@ -175,7 +179,18 @@ async def get_ai_feedback(
                 exercise_response,
                 feedback_type
             ):
+                complete_feedback.append(chunk["chunk"])
                 yield f"data: {json.dumps(chunk)}\n\n"
+
+            # 在流式生成完成后，使用新的数据库会话保存反馈
+            if complete_feedback:  # 只有在有反馈内容时才尝试保存
+                with SessionLocal() as new_session:  # 创建新的数据库会话
+                    service = ExerciseService(new_session)
+                    service.save_feedback(
+                        exercise_id,
+                        "".join(complete_feedback)
+                    )
+
         except Exception as e:
             print(f"生成反馈时出错: {str(e)}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
