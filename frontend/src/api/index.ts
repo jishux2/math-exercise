@@ -109,8 +109,12 @@ export const exercises = {
     return response.data;
   },
   
-  getExercise: async (id: number) => {
-    const response = await api.get(`/exercises/${id}`);
+  // 接收练习ID和可选的AbortSignal参数
+  getExercise: async (id: number, signal?: AbortSignal) => {
+    // 发送GET请求到服务器
+    // 将signal包含在请求配置中，使请求可以被取消
+    const response = await api.get(`/exercises/${id}`, { signal });
+    // 返回响应中的数据部分
     return response.data;
   },
   

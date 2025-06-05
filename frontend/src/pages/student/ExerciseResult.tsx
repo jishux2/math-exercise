@@ -70,12 +70,21 @@ const ExerciseResult = () => {
 
   // 加载练习数据和处理AI反馈
   useEffect(() => {
+    // 每次effect执行都会创建新的controller
+    const abortController = new AbortController();
+
     const loadExercise = async () => {
       if (!id) return;
       
       setLoading(true);
       try {
-        const data = await exercises.getExercise(parseInt(id));
+        // 发送请求时带上signal
+        const data = await exercises.getExercise(parseInt(id), abortController.signal);
+        
+        // 如果请求被取消了（说明这是第一次的请求），直接返回
+        if (abortController.signal.aborted) return;
+        
+        // 只有未被取消的请求（第二次的请求）才会更新状态
         setExercise(data);
         
         if (data.ai_feedback) {
@@ -84,15 +93,26 @@ const ExerciseResult = () => {
           getFeedback(parseInt(id));
         }
       } catch (error) {
-        setLoadingError('加载练习结果失败');  // 使用loadingError
-        console.error('Failed to load exercise:', error);
+        // 被取消的请求会抛出AbortError，我们不处理它
+        if (!abortController.signal.aborted) {  // 只在非取消的情况下设置错误
+          setLoadingError('加载练习结果失败');
+          console.error('Failed to load exercise:', error);
+        }
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {  // 只在非取消的情况下设置loading状态
+          setLoading(false);
+        }
       }
     };
 
     loadExercise();
-  }, [id, shouldGenerateAI]);  // 添加shouldGenerateAI到依赖数组
+
+    // 清理函数：当effect重新执行前，会先调用这个函数
+    return () => {
+      // 取消当前的请求
+      abortController.abort();
+    };
+  }, [id, shouldGenerateAI]);
 
   // 判断是否需要显示"生成AI点评"按钮
   // 只有当没有正在生成、没有现有反馈、没有错误、且不是自动生成模式时才显示
