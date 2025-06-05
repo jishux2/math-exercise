@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth, getDefaultRoute } from './contexts/AuthContext';
 import ProtectedRoute, { 
@@ -20,6 +21,7 @@ import Profile from './pages/Profile';
 import ExerciseHistory from './pages/student/ExerciseHistory';
 import MyScores from './pages/student/MyScores';
 import ExerciseResult from './pages/student/ExerciseResult';  // 添加导入
+import MarkdownTest from './pages/MarkdownTest';
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <Router>
         <AuthProvider>
+        <Toaster position="top-right" />  {/* 添加这一行 */}
           <Routes>
             {/* 公共路由 */}
             <Route path="/login" element={<Login />} />
@@ -122,7 +125,7 @@ const App = () => {
                   </ProtectedRoute>
                 }
               />
-
+              <Route path="/markdown-test" element={<MarkdownTest />} />
               {/* 通配符路由重定向 */}
               <Route path="*" element={<DefaultRedirect />} />
             </Route>

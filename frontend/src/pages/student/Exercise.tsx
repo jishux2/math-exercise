@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { exercises, ai } from '../../api';
 import AISettingsDialog from '../../components/AISettingsDialog';
 import AIFeedbackPreview from '../../components/AIFeedbackPreview';
+import AIControl from '../../components/AIControl';
+import toast from 'react-hot-toast';
 
 const Exercise = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +20,7 @@ const Exercise = () => {
   const [aiFeedback, setAIFeedback] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [isAILoading, setIsAILoading] = useState(false);
 
   useEffect(() => {
     const loadExercise = async () => {
@@ -62,7 +65,7 @@ const Exercise = () => {
         }
         
         // 完成后跳转到结果页面
-        navigate(`/student/result/${exercise.id}`);  // 添加/student前缀
+        // navigate(`/student/result/${exercise.id}`);  // 添加/student前缀
       }
     } catch (error) {
       console.error('Failed to submit answer:', error);
@@ -70,27 +73,37 @@ const Exercise = () => {
   };
 
   // AI相关函数
-  const handleAIToggle = () => {
-    if (!isAIEnabled) {
-      setIsSettingsOpen(true);
-    } else {
+  const handleAIToggle = async () => {
+    if (!isAIEnabled && !isAILoading) {
+      setIsAILoading(true);
+      try {
+        setIsSettingsOpen(true);
+      } finally {
+        setIsAILoading(false);
+      }
+    } else if (isAIEnabled) {
       setIsAIEnabled(false);
       setAIFeedback('');
     }
   };
 
   const handleSettingsSubmit = async (tokens: { pb_token: string; plat_token: string }) => {
+    setIsAILoading(true);
     try {
       const result = await ai.initialize(tokens);
       if (result.success) {
         setIsAIEnabled(true);
-        setIsSettingsOpen(false);
+        // 不需要在这里设置setIsSettingsOpen(false)了，因为对话框会自动关闭
+        return; // 成功时返回
       } else {
-        alert('AI服务初始化失败');
+        throw new Error('AI服务初始化失败');
       }
     } catch (error) {
       console.error('Failed to initialize AI:', error);
-      alert('AI服务初始化失败');
+      toast.error('AI服务初始化失败，请稍后重试');
+      throw error; // 抛出错误，这样对话框不会关闭
+    } finally {
+      setIsAILoading(false);
     }
   };
 
@@ -130,18 +143,11 @@ const Exercise = () => {
         <div className="text-lg font-semibold">
           题目 {currentQuestionIndex + 1} / {exercise.questions.length}
         </div>
-        <button
-          onClick={handleAIToggle}
-          className={`
-            px-4 py-2 rounded-full text-sm font-medium
-            ${isAIEnabled 
-              ? 'bg-green-500 text-white' 
-              : 'bg-gray-200 text-gray-700'
-            }
-          `}
-        >
-          {isAIEnabled ? 'AI点评已启用' : '启用AI点评'}
-        </button>
+        <AIControl
+          enabled={isAIEnabled}
+          loading={isAILoading}
+          onToggle={handleAIToggle}
+        />
       </div>
 
       {/* 题目内容 */}
