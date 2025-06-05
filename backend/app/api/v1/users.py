@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ...database import get_db
 from ...services import UserService
 from ...schemas import user as schemas
+from ...schemas.stats import TeacherStats, ParentStats
 from ...models import User, UserRole
 from ..deps import (
     get_current_active_user,
@@ -30,6 +31,39 @@ def create_student(
             detail="该邮箱已被注册"
         )
     return user_service.create_student(obj_in=student_in)
+
+@router.post("/register/students", response_model=schemas.UserResponse, status_code=201)
+async def register_student(
+    *,
+    db: Session = Depends(get_db),
+    student_data: schemas.StudentCreate
+) -> Any:
+    """学生注册(公开端点)
+    
+    请求体示例:
+    {
+        "email": "test@example.com",
+        "username": "testuser",
+        "password": "testpassword",
+        "profile": {
+            "grade": "一年级",
+            "class_name": "1班"
+        }
+    }
+    """
+    user_service = UserService(db)
+    if user_service.get_by_email(email=student_data.email):
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+    if user_service.get_by_username(username=student_data.username):
+        raise HTTPException(
+            status_code=400,
+            detail="Username already taken"
+        )
+    
+    return user_service.create_student(obj_in=student_data)
 
 @router.post("/teachers", response_model=schemas.UserResponse)
 def create_teacher(
@@ -62,6 +96,27 @@ def create_parent(
             detail="该邮箱已被注册"
         )
     return user_service.create_parent(obj_in=parent_in)
+
+@router.post("/admins", response_model=schemas.UserResponse)
+def create_admin(
+    *,
+    db: Session = Depends(get_db),
+    admin_in: schemas.AdminCreate,
+    current_user: User = Depends(check_admin)
+) -> Any:
+    """创建管理员账号（仅超级管理员）"""
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="只有超级管理员可以创建管理员账号"
+        )
+    user_service = UserService(db)
+    if user_service.get_by_email(email=admin_in.email):
+        raise HTTPException(
+            status_code=400,
+            detail="该邮箱已被注册"
+        )
+    return user_service.create_admin(obj_in=admin_in)
 
 @router.get("/me", response_model=schemas.UserResponse)
 def read_user_me(
@@ -201,3 +256,129 @@ def get_student_progress(
     
     user_service = UserService(db)
     return user_service.get_student_progress(student_id)
+
+@router.get("/admins", response_model=List[schemas.UserResponse])
+def list_admins(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_admin)
+) -> Any:
+    """获取管理员列表（仅超级管理员可访问）"""
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="只有超级管理员可以查看管理员列表"
+        )
+    user_service = UserService(db)
+    return user_service.get_all_admins()
+
+@router.get("/teachers", response_model=List[schemas.UserResponse])
+async def get_teachers(
+    *,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_admin)
+) -> Any:
+    """获取所有教师列表（仅管理员）"""
+    user_service = UserService(db)
+    teachers = user_service.get_multi_by_role(role=UserRole.TEACHER)
+    return teachers
+
+@router.get("/parents", response_model=List[schemas.UserResponse])
+async def get_parents(
+    *,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_admin)
+) -> Any:
+    """获取所有家长列表（仅管理员）"""
+    user_service = UserService(db)
+    parents = user_service.get_multi_by_role(role=UserRole.PARENT)
+    return parents
+
+@router.post("/{user_id}/activate", response_model=schemas.UserResponse)
+def activate_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_admin)
+) -> Any:
+    """激活用户账号（仅管理员）"""
+    user_service = UserService(db)
+    user = user_service.get(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="用户不存在"
+        )
+    return user_service.activate_user(user)
+
+@router.post("/{user_id}/deactivate", response_model=schemas.UserResponse)
+def deactivate_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_admin)
+) -> Any:
+    """禁用用户账号（仅管理员）"""
+    user_service = UserService(db)
+    user = user_service.get(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="用户不存在"
+        )
+    return user_service.deactivate_user(user)
+
+@router.delete("/{user_id}")
+async def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_admin)
+) -> dict:
+    """删除用户（仅管理员）"""
+    user_service = UserService(db)
+    user = user_service.get(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="用户不存在"
+        )
+    if user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="不能删除超级管理员账号"
+        )
+    user_service.delete(user_id)
+    return {"status": "success"}
+
+@router.get("/me/students", response_model=List[schemas.UserResponse])
+def get_my_students(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_parent)
+) -> Any:
+    """获取当前家长关联的学生列表"""
+    user_service = UserService(db)
+    return user_service.get_parent_students(current_user.parent.id)
+
+@router.get("/me/teacher-students", response_model=List[schemas.UserResponse])
+def get_my_teacher_students(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_teacher)
+) -> Any:
+    """获取当前教师的学生列表"""
+    user_service = UserService(db)
+    return user_service.get_teacher_students(current_user.teacher.id)
+
+@router.get("/me/teacher-stats", response_model=TeacherStats)
+def get_teacher_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_teacher)
+) -> Any:
+    """获取教师的学生统计数据"""
+    user_service = UserService(db)
+    return user_service.get_teacher_stats(current_user.teacher.id)
+
+@router.get("/me/parent-stats", response_model=ParentStats)
+def get_parent_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_parent)
+) -> Any:
+    """获取家长的孩子统计数据"""
+    user_service = UserService(db)
+    return user_service.get_parent_stats(current_user.parent.id)

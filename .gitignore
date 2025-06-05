@@ -17,3 +17,6 @@ temp.*
 poe_api_wrapper/
 
 .VSCodeCounter/
+
+prompt.md
+midterm-report.*

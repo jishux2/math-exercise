@@ -41,7 +41,6 @@ const ExerciseResult = () => {
   const [aiFeedback, setAIFeedback] = useState<string>('');
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
-  // 将getFeedback移到useEffect外部，并使用useCallback
   const getFeedback = async (exerciseId: number) => {
     if (isGeneratingFeedback) return;
     

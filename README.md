@@ -82,8 +82,8 @@ math_exercise/
 
 ## 开发说明
 
-- 后端API开发：参见 [backend/README.md](backend/README.md)
-- 前端开发：参见 [frontend/README.md](frontend/README.md)
+- 后端API开发：参见[backend/README.md](backend/README.md)
+- 前端开发：参见[frontend/README.md](frontend/README.md)
 
 ## License
 

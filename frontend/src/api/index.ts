@@ -4,7 +4,7 @@ import { ExerciseListResponse, ExerciseStats } from './types';
 
 const BASE_URL = 'http://localhost:8000/api/v1';
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -76,9 +76,14 @@ export const auth = {
       email: string;
       username: string;
       password: string;
-      subjects: string[];
+      profile: {
+        subjects: string[];
+      };
     }) => {
-      const response = await api.post('/users/teachers', data);
+      const response = await api.post('/users/teachers', {
+        ...data,
+        role: UserRole.TEACHER
+      });
       return response.data;
     },
   
@@ -91,14 +96,70 @@ export const auth = {
       const response = await api.post('/users/parents', data);
       return response.data;
     },
+
+    registerStudent: async (data: {
+      email: string;
+      username: string;
+      password: string;
+      profile: {
+        grade: string;
+        class_name: string;
+      };
+    }) => {
+      const requestData = {
+        email: data.email,
+        username: data.username,
+        password: data.password,
+        profile: data.profile,
+        role: UserRole.STUDENT
+      };
+      const response = await api.post('/users/register/students', requestData);
+      return response.data;
+    },
   
     getTeacherStudents: async () => {
-      const response = await api.get('/users/teachers/students');
+      const response = await api.get('/users/me/teacher-students');
       return response.data;
     },
   
     getParentStudents: async () => {
-      const response = await api.get('/users/parents/students');
+      const response = await api.get('/users/me/students');
+      return response.data;
+    },
+
+    getTeachers: async () => {
+      const response = await api.get('/users/teachers');
+      return response.data;
+    },
+
+    getParents: async () => {
+      const response = await api.get('/users/parents');
+      return response.data;
+    },
+
+    assignTeacher: async (studentId: number, teacherId: number) => {
+      const response = await api.post(`/users/students/${studentId}/teacher/${teacherId}`);
+      return response.data;
+    },
+
+    linkParent: async (studentId: number, parentId: number) => {
+      const response = await api.post(`/users/students/${studentId}/parent/${parentId}`);
+      return response.data;
+    },
+
+    createAdmin: async (data: {
+      email: string;
+      username: string;
+      password: string;
+      is_superuser?: boolean;
+      permissions?: string[];
+    }) => {
+      const response = await api.post('/users/admins', data);
+      return response.data;
+    },
+
+    getAdmins: async (): Promise<User[]> => {
+      const response = await api.get('/users/admins');
       return response.data;
     },
   };

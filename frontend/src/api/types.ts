@@ -5,6 +5,41 @@ export enum UserRole {
   ADMIN = "admin"
 }
 
+export interface BaseUser {
+  id: number;
+  email: string;
+  username: string;
+  is_active: boolean;
+  role: UserRole;
+}
+
+export interface User extends BaseUser {
+  is_superuser?: boolean;
+  student_profile?: {
+    grade: string;
+    class_name: string;
+  };
+  teacher_profile?: {
+    subjects: string[];
+  };
+  parent_profile?: {
+    student_ids: number[];
+  };
+  admin_profile?: {
+    permissions: string[];
+    is_superuser: boolean;
+  };
+}
+
+export interface Admin extends BaseUser {
+  role: UserRole.ADMIN;
+  is_superuser: boolean;
+  admin_profile: {
+    permissions: string[];
+    is_superuser: boolean;
+  };
+}
+
 export interface Question {
   id: number;
   exercise_id: number;
@@ -58,17 +93,37 @@ export interface TeacherProfile {
   subjects: string[];
 }
 
+export interface AdminProfile {
+  is_superuser: boolean;
+  permissions: string[];
+}
+
 export interface User {
   id: number;
   email: string;
   username: string;
   role: UserRole;
   is_active: boolean;
+  is_superuser?: boolean;
   created_at: string;
   
   // 角色特定的配置信息
   student_profile?: StudentProfile;    // 仅当role为STUDENT时存在
   teacher_profile?: TeacherProfile;    // 仅当role为TEACHER时存在
+  admin_profile?: AdminProfile;        // 仅当role为ADMIN时存在
+}
+
+export interface Admin extends User {
+  is_superuser: boolean;
+  admin_profile: AdminProfile;
+}
+
+export interface AdminCreate {
+  email: string;
+  username: string;
+  password: string;
+  is_superuser?: boolean;
+  permissions?: string[];
 }
 
 export interface LoginResponse {

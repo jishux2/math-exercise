@@ -34,6 +34,7 @@ from .exercise import (
     ExerciseStats, ExerciseListResponse, ExerciseFeedbackRequest
 )
 from .common import ErrorResponse, PaginationParams, HealthCheck
+from .stats import TeacherStats, ParentStats, ActivityBase, ChildStats
 
 # __all__变量明确指定了可以从这个模块导入的名称
 __all__ = [
@@ -82,5 +83,9 @@ __all__ = [
     # 通用工具模型
     "ErrorResponse",     # 错误响应模型
     "PaginationParams",  # 分页参数模型
-    "HealthCheck"        # 健康检查模型
+    "HealthCheck",      # 健康检查模型
+
+    # 新增统计模型
+    "TeacherStats",     # 教师统计信息模型
+    "ParentStats"       # 家长统计信息模型
 ]

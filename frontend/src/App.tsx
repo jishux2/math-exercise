@@ -15,13 +15,23 @@ import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import CreateExercise from './pages/student/CreateExercise';
 import Exercise from './pages/student/Exercise';
-import TeacherDashboard from './pages/teacher/TeacherDashboard';
-import ParentDashboard from './pages/parent/ParentDashboard';
+
 import Profile from './pages/Profile';
 import ExerciseHistory from './pages/student/ExerciseHistory';
 import MyScores from './pages/student/MyScores';
 import ExerciseResult from './pages/student/ExerciseResult';  // 添加导入
 import MarkdownTest from './pages/MarkdownTest';
+// 教师页面
+import TeacherDashboard from './pages/teacher/TeacherDashboard';
+import TeacherStudents from './pages/teacher/TeacherStudents';
+
+// 家长页面
+import ParentDashboard from './pages/parent/ParentDashboard';
+import ParentStudents from './pages/parent/ParentStudents';
+
+// 管理员页面
+import AdminDashboard from './pages/admin/AdminDashboard';
+import StudentProgress from './pages/common/StudentProgress';
 
 const queryClient = new QueryClient();
 
@@ -100,7 +110,22 @@ const App = () => {
                     </TeacherRoute>
                   }
                 />
-                {/* 其他教师路由... */}
+                <Route
+                  path="students"
+                  element={
+                    <TeacherRoute>
+                      <TeacherStudents />
+                    </TeacherRoute>
+                  }
+                />
+                <Route
+                  path="students/:studentId/progress"
+                  element={
+                    <TeacherRoute>
+                      <StudentProgress />
+                    </TeacherRoute>
+                  }
+                />
               </Route>
 
               {/* 家长路由 */}
@@ -113,7 +138,34 @@ const App = () => {
                     </ParentRoute>
                   }
                 />
-                {/* 其他家长路由... */}
+                <Route
+                  path="students"
+                  element={
+                    <ParentRoute>
+                      <ParentStudents />
+                    </ParentRoute>
+                  }
+                />
+                <Route
+                  path="students/:studentId/progress"
+                  element={
+                    <ParentRoute>
+                      <StudentProgress />
+                    </ParentRoute>
+                  }
+                />
+              </Route>
+
+              {/* 管理员路由 */}
+              <Route path="admin">
+                <Route
+                  path="dashboard"
+                  element={
+                    <AdminRoute>
+                      <AdminDashboard />
+                    </AdminRoute>
+                  }
+                />
               </Route>
 
               {/* 个人资料路由 */}

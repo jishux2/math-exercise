@@ -142,8 +142,15 @@ class Question(Base):
     @hybrid_property
     def is_correct(self) -> bool:
         """
-        混合属性：判断答案是否正确
-        在Python层面的实现，允许0.001的误差范围
+        混合属性：判断答案是否正确（Python层面的实现）
+        
+        这个方法处理Python对象级别的计算，当我们直接访问question.is_correct时使用。
+        在Python中可以直接使用if判断和abs()函数，写法自然且直观：
+        - 先用if处理None值的情况
+        - 再用abs()计算差值并比较
+        
+        而这种Python的写法无法直接转换为SQL表达式，所以需要用@is_correct.expression
+        定义另一个专门用于SQL查询的实现。
         """
         if self.user_answer is None:
             return False
@@ -152,8 +159,17 @@ class Question(Base):
     @is_correct.expression
     def is_correct(cls):
         """
-        混合属性：判断答案是否正确
-        在数据库层面的SQL实现，用于在查询中直接使用此属性
+        混合属性：判断答案是否正确（SQL层面的实现）
+        
+        这个方法处理数据库查询层面的计算，在进行filter()等查询操作时使用。
+        因为SQL的语法结构和Python完全不同，所以需要用SQLAlchemy提供的工具来构建等价的SQL表达式：
+        - 用case()代替if判断
+        - 用is_()代替is None判断
+        - 用func.abs()代替abs()函数
+        - 用cast()确保类型转换
+        
+        例如可以这样查询：
+        session.query(Question).filter(Question.is_correct).all()
         """
         return case(
             # 如果用户答案为空，返回False
