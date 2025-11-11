@@ -1,8 +1,6 @@
-from typing import Optional
-from threading import Event, Thread
-from queue import Queue
-from ..schemas.exercise import ExerciseResponse
-from typing import Optional, Dict
+# app/services/ai_service.py
+
+from typing import Optional, Dict, AsyncGenerator
 from datetime import datetime
 import asyncio
 
@@ -12,7 +10,8 @@ class AIService:
     
     @classmethod
     def get_instance(cls, user_id: int) -> 'AIService':
-        """获取指定用户的AI服务实例"""
+        """获取指定用户的AI服务实例（保持同步，因为只是获取实例）"""
+        # 这部分保持不变
         print(f"\n{'='*50}")
         print(f"正在获取用户{user_id}的AI服务实例")
         print(f"当前所有实例: {[uid for uid in cls._user_instances.keys()]}")
@@ -41,21 +40,21 @@ class AIService:
 
     def __init__(self, user_id: int):
         self.user_id = user_id
-        self.poe_client = None
-        self.stop_event = Event()
-        self.response_queue = Queue()
+        self.poe_client = None  # 现在会是AsyncPoeApi实例
         self._tokens: Dict[str, str] = {}
         self.last_used = datetime.utcnow()
+        self._generation_cancelled = False  # 用于取消生成的标志
 
-    def initialize_client(self, pb_token: str, plat_token: str) -> bool:
-        """初始化poe客户端"""
+    async def initialize_client(self, pb_token: str, plat_token: str) -> bool:
+        """初始化poe客户端（异步版本）"""
         try:
-            from poe_api_wrapper import PoeApi
+            from poe_api_wrapper import AsyncPoeApi
             self._tokens = {
                 "p-b": pb_token,
                 "p-lat": plat_token,
             }
-            self.poe_client = PoeApi(tokens=self._tokens, auto_proxy=True)
+            # 使用异步API并创建客户端实例
+            self.poe_client = await AsyncPoeApi(tokens=self._tokens, auto_proxy=True).create()
             self.last_used = datetime.utcnow()
             print(f"用户{self.user_id}的AI客户端初始化成功")
             return True
@@ -70,65 +69,52 @@ class AIService:
         print(f"AI服务状态: {'可用' if available else '不可用'}")  # 添加调试信息
         return available
 
-    def stop_generation(self):
-        """停止生成"""
-        self.stop_event.set()
+    def cancel_generation(self):
+        """标记取消生成"""
+        self._generation_cancelled = True
 
     def reset(self):
         """重置状态"""
-        self.stop_event.clear()
-        while not self.response_queue.empty():
-            self.response_queue.get()
+        self._generation_cancelled = False
 
-    def generate_exercise_feedback(
+    async def generate_feedback_stream(
         self,
-        exercise: ExerciseResponse,
+        exercise: 'ExerciseResponse',
         feedback_type: str = "detailed"
-    ) -> Optional[str]:
-        """生成练习反馈（同步版本）"""
-        if not self.is_available():
-            return None
-
-        prompt = self._build_feedback_prompt(exercise, feedback_type)
-        try:
-            full_response = ""
-            for chunk in self.poe_client.send_message("chinchilla", prompt):
-                if self.stop_event.is_set():
-                    return None
-                response_text = chunk.get("response", "")
-                full_response += response_text
-            return full_response
-        except Exception as e:
-            print(f"生成反馈失败: {str(e)}")
-            return None
-
-    def generate_feedback_stream(
-        self,
-        exercise: ExerciseResponse,
-        feedback_type: str = "detailed"
-    ):
-        """生成练习反馈（流式版本）"""
+    ) -> AsyncGenerator[dict, None]:
+        """生成练习反馈（异步流式版本）"""
         if not self.is_available():
             yield {"error": "AI服务不可用"}
             return
 
         prompt = self._build_feedback_prompt(exercise, feedback_type)
+        self._generation_cancelled = False  # 重置取消标志
+        
         try:
-            for chunk in self.poe_client.send_message("chinchilla", prompt):
-                if self.stop_event.is_set():
-                    yield {"status": "stopped"}
+            # 使用异步API的send_message
+            async for chunk in self.poe_client.send_message("chinchilla", prompt):
+                if self._generation_cancelled:
+                    # 如果需要取消，调用API的cancel方法
+                    await self.poe_client.cancel_message(chunk)
+                    yield {"status": "cancelled"}
                     return
+                
+                # 从chunk中提取响应文本
                 response_text = chunk.get("response", "")
-                yield {"chunk": response_text}
+                if response_text:  # 只在有实际内容时才yield
+                    yield {"chunk": response_text}
+                    
         except Exception as e:
+            print(f"生成反馈失败: {str(e)}")
             yield {"error": str(e)}
 
     def _build_feedback_prompt(
         self,
-        exercise: ExerciseResponse,
+        exercise: 'ExerciseResponse',
         feedback_type: str
     ) -> str:
-        """构建反馈提示"""
+        """构建反馈提示（这部分逻辑不变）"""
+        # 保持原有实现不变
         system_prompt = """System: 你现在是一位经验丰富的小学数学老师。请注意以下要求：
 
 1. 语气要求：
@@ -205,6 +191,7 @@ User: 请针对上述练习情况进行{'详细' if feedback_type == 'detailed' 
 
 
 class AIServiceManager:
+    # AIServiceManager的实现保持不变
     def __init__(self, cleanup_interval: int = 3600, max_idle_time: int = 7200):
         self.cleanup_interval = cleanup_interval  # 清理间隔（秒）
         self.max_idle_time = max_idle_time  # 最大空闲时间（秒）

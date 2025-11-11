@@ -59,8 +59,9 @@ def get_exercise_stats(
     exercise_service = ExerciseService(db)
     return exercise_service.get_student_exercise_stats(current_user.student.id)
 
+# 初始化AI服务的路由改为异步
 @router.post("/ai/initialize")
-def initialize_ai(
+async def initialize_ai(
     *,
     db: Session = Depends(get_db),
     current_user: User = Depends(check_student),
@@ -68,7 +69,8 @@ def initialize_ai(
 ) -> Any:
     """初始化AI服务"""
     ai_service = AIService.get_instance(current_user.student.id)
-    success = ai_service.initialize_client(
+    # 改为异步调用
+    success = await ai_service.initialize_client(
         tokens.get("pb_token"),
         tokens.get("plat_token")
     )
@@ -133,6 +135,7 @@ def get_exercise_detail_stats(
     
     return exercise_service.get_exercise_stats(exercise_id)
 
+# AI反馈路由已经是异步的，主要改动在generate函数内部
 @router.get("/{exercise_id}/ai-feedback")
 async def get_ai_feedback(
     exercise_id: int,
@@ -175,11 +178,13 @@ async def get_ai_feedback(
             # ExerciseResponse需要访问exercise.questions来序列化数据
             # 但此时会话已关闭，会抛出DetachedInstanceError
 
-            for chunk in ai_service.generate_feedback_stream(
+            # 使用async for处理异步生成器
+            async for chunk in ai_service.generate_feedback_stream(
                 exercise_response,
                 feedback_type
             ):
-                complete_feedback.append(chunk["chunk"])
+                if "chunk" in chunk:
+                    complete_feedback.append(chunk["chunk"])
                 yield f"data: {json.dumps(chunk)}\n\n"
 
             # 在流式生成完成后，使用新的数据库会话保存反馈
@@ -204,6 +209,7 @@ async def get_ai_feedback(
         }
     )
 
+# 停止反馈路由保持不变，只是调用的方法名改了
 @router.post("/{exercise_id}/ai-feedback/stop")
 def stop_ai_feedback(
     exercise_id: int,
@@ -220,7 +226,7 @@ def stop_ai_feedback(
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     ai_service = AIService.get_instance(current_user.student.id)
-    ai_service.stop_generation()
+    ai_service.cancel_generation()  # 方法名从stop_generation改为cancel_generation
     return {"success": True}
 
 @router.post("/{exercise_id}/questions/{question_id}/answer")
