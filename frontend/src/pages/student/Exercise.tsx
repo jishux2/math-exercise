@@ -20,16 +20,28 @@ const Exercise = () => {
   const [isAILoading, setIsAILoading] = useState(false);
 
   useEffect(() => {
+    const abortController = new AbortController();
+
     const loadExercise = async () => {
       try {
-        const data = await exercises.getExercise(parseInt(id!));
+        const data = await exercises.getExercise(parseInt(id!), abortController.signal);
+        
+        if (abortController.signal.aborted) return;
+        
         setExercise(data);
         setStartTime(Date.now());
       } catch (error) {
-        console.error('Failed to load exercise:', error);
+        if (!abortController.signal.aborted) {
+          console.error('Failed to load exercise:', error);
+        }
       }
     };
+
     loadExercise();
+
+    return () => {
+      abortController.abort();
+    };
   }, [id]);
 
   const handleSubmitAnswer = async () => {
