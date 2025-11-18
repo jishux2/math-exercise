@@ -152,6 +152,7 @@ class AdminCreate(UserCreateBase):
     用于创建管理员用户，包含基本信息、密码和特殊权限配置
     """
     role: UserRole = UserRole.ADMIN      # 固定角色为管理员
+    is_superuser: bool = False           # 是否为超级管理员
     permissions: List[str] = []          # 特殊权限列表
 
 
@@ -164,6 +165,31 @@ class UserResponse(UserInDB):
     teacher_profile: Optional[TeacherProfile] = None  # 教师配置（仅当用户是教师时）
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserCreate(BaseModel):
+    """通用用户创建模型
+    
+    用于注册接口，根据role字段决定创建哪种用户
+    """
+    email: EmailStr
+    username: str
+    password: str
+    role: UserRole = UserRole.STUDENT  # 默认角色为学生
+
+    @field_validator('username')
+    def username_must_be_valid(cls, v):
+        if len(v) < 3:
+            raise ValueError('用户名至少需要3个字符')
+        if len(v) > 20:
+            raise ValueError('用户名不能超过20个字符')
+        return v
+
+    @field_validator('password')
+    def password_must_be_strong(cls, v):
+        if len(v) < 6:
+            raise ValueError('密码至少需要6个字符')
+        return v
 
 
 class Token(BaseModel):

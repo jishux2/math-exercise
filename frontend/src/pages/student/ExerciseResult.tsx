@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';  // 添加useLocation
 import { exercises, ai } from '../../api';
 import AIFeedbackPreview from '../../components/AIFeedbackPreview';
@@ -41,8 +41,7 @@ const ExerciseResult = () => {
   const [aiFeedback, setAIFeedback] = useState<string>('');
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
-  // 将getFeedback移到useEffect外部，并使用useCallback
-  const getFeedback = async (exerciseId: number) => {
+  const getFeedback = useCallback(async (exerciseId: number) => {
     if (isGeneratingFeedback) return;
     
     setIsGeneratingFeedback(true);
@@ -66,7 +65,7 @@ const ExerciseResult = () => {
     } finally {
       setIsGeneratingFeedback(false);
     }
-  };
+  }, [isGeneratingFeedback]);
 
   // 加载练习数据和处理AI反馈
   useEffect(() => {
@@ -112,7 +111,7 @@ const ExerciseResult = () => {
       // 取消当前的请求
       abortController.abort();
     };
-  }, [id, shouldGenerateAI]);
+  }, [id, shouldGenerateAI, getFeedback]);
 
   // 判断是否需要显示"生成AI点评"按钮
   // 只有当没有正在生成、没有现有反馈、没有错误、且不是自动生成模式时才显示

@@ -1,0 +1,704 @@
+<!DOCTYPE html><html><head>
+      <title>midterm-report</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      
+      <link rel="stylesheet" href="file:///c:\Users\admin\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.15\crossnote\dependencies\katex\katex.min.css">
+      
+      
+      
+      
+      
+      <style>
+      code[class*=language-],pre[class*=language-]{color:#333;background:0 0;font-family:Consolas,"Liberation Mono",Menlo,Courier,monospace;text-align:left;white-space:pre;word-spacing:normal;word-break:normal;word-wrap:normal;line-height:1.4;-moz-tab-size:8;-o-tab-size:8;tab-size:8;-webkit-hyphens:none;-moz-hyphens:none;-ms-hyphens:none;hyphens:none}pre[class*=language-]{padding:.8em;overflow:auto;border-radius:3px;background:#f5f5f5}:not(pre)>code[class*=language-]{padding:.1em;border-radius:.3em;white-space:normal;background:#f5f5f5}.token.blockquote,.token.comment{color:#969896}.token.cdata{color:#183691}.token.doctype,.token.macro.property,.token.punctuation,.token.variable{color:#333}.token.builtin,.token.important,.token.keyword,.token.operator,.token.rule{color:#a71d5d}.token.attr-value,.token.regex,.token.string,.token.url{color:#183691}.token.atrule,.token.boolean,.token.code,.token.command,.token.constant,.token.entity,.token.number,.token.property,.token.symbol{color:#0086b3}.token.prolog,.token.selector,.token.tag{color:#63a35c}.token.attr-name,.token.class,.token.class-name,.token.function,.token.id,.token.namespace,.token.pseudo-class,.token.pseudo-element,.token.url-reference .token.variable{color:#795da3}.token.entity{cursor:help}.token.title,.token.title .token.punctuation{font-weight:700;color:#1d3e81}.token.list{color:#ed6a43}.token.inserted{background-color:#eaffea;color:#55a532}.token.deleted{background-color:#ffecec;color:#bd2c00}.token.bold{font-weight:700}.token.italic{font-style:italic}.language-json .token.property{color:#183691}.language-markup .token.tag .token.punctuation{color:#333}.language-css .token.function,code.language-css{color:#0086b3}.language-yaml .token.atrule{color:#63a35c}code.language-yaml{color:#183691}.language-ruby .token.function{color:#333}.language-markdown .token.url{color:#795da3}.language-makefile .token.symbol{color:#795da3}.language-makefile .token.variable{color:#183691}.language-makefile .token.builtin{color:#0086b3}.language-bash .token.keyword{color:#0086b3}pre[data-line]{position:relative;padding:1em 0 1em 3em}pre[data-line] .line-highlight-wrapper{position:absolute;top:0;left:0;background-color:transparent;display:block;width:100%}pre[data-line] .line-highlight{position:absolute;left:0;right:0;padding:inherit 0;margin-top:1em;background:hsla(24,20%,50%,.08);background:linear-gradient(to right,hsla(24,20%,50%,.1) 70%,hsla(24,20%,50%,0));pointer-events:none;line-height:inherit;white-space:pre}pre[data-line] .line-highlight:before,pre[data-line] .line-highlight[data-end]:after{content:attr(data-start);position:absolute;top:.4em;left:.6em;min-width:1em;padding:0 .5em;background-color:hsla(24,20%,50%,.4);color:#f4f1ef;font:bold 65%/1.5 sans-serif;text-align:center;vertical-align:.3em;border-radius:999px;text-shadow:none;box-shadow:0 1px #fff}pre[data-line] .line-highlight[data-end]:after{content:attr(data-end);top:auto;bottom:.4em}html body{font-family:'Helvetica Neue',Helvetica,'Segoe UI',Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ol,html body>ul{margin-bottom:16px}html body ol,html body ul{padding-left:2em}html body ol.no-list,html body ul.no-list{padding:0;list-style-type:none}html body ol ol,html body ol ul,html body ul ol,html body ul ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:700;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:700}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::after,html body code::before{letter-spacing:-.2em;content:'\00a0'}html body pre>code{padding:0;margin:0;word-break:normal;white-space:pre;background:0 0;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:after,html body pre code:before,html body pre tt:after,html body pre tt:before{content:normal}html body blockquote,html body dl,html body ol,html body p,html body pre,html body ul{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body code,html body pre{word-wrap:break-word;white-space:pre}}.markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview ul{list-style:disc}.markdown-preview ul ul{list-style:circle}.markdown-preview ul ul ul{list-style:square}.markdown-preview ol{list-style:decimal}.markdown-preview ol ol,.markdown-preview ul ol{list-style-type:lower-roman}.markdown-preview ol ol ol,.markdown-preview ol ul ol,.markdown-preview ul ol ol,.markdown-preview ul ul ol{list-style-type:lower-alpha}.markdown-preview .newpage,.markdown-preview .pagebreak{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center!important}.markdown-preview:not([data-for=preview]) .code-chunk .code-chunk-btn-group{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .status{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0;min-height:100vh}@media screen and (min-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{font-size:14px!important;padding:1em}}@media print{html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div,html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% - 300px);padding:2em calc(50% - 457px - 300px / 2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}
+/* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+      </style>
+      <!-- The content below will be included at the end of the <head> element. --><script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    // your code here
+  });
+</script></head><body for="html-export">
+    
+    
+      <div class="crossnote markdown-preview  ">
+      
+<p><a href="https://poe.com/chat/iarc64uiio4upnoqap">完整对话</a>（3418168893）</p>
+<p>我来帮你准备一个介绍项目的口述稿。这个稿子会突出项目的技术亮点和创新性：</p>
+<p>（开场）<br>
+"大家好，我是xx。今天向大家汇报的是'基于前后端分离架构的数学练习系统'的开发进展。这个项目旨在为学生提供一个智能化的数学练习平台。</p>
+<p>（系统定位）<br>
+我们的项目具有以下特色：</p>
+<ol>
+<li>使用工厂模式自动生成个性化题目</li>
+<li>采用策略模式实现灵活的评分机制</li>
+<li>通过观察者模式监控练习状态</li>
+<li>集成AI点评功能，提供智能化教学反馈</li>
+<li>基于前后端分离架构，提高系统的可扩展性和维护性</li>
+</ol>
+<p>（技术栈介绍）<br>
+在技术选型上，我们采用了主流的技术栈：</p>
+<ul>
+<li>后端使用FastAPI框架，实现了RESTful API</li>
+<li>前端基于React和TypeScript，使用Tailwind CSS构建界面</li>
+<li>数据库选用SQLite，使用SQLAlchemy作为ORM</li>
+<li>AI服务集成了POE API，提供实时的练习评价</li>
+</ul>
+<p>（当前进展）<br>
+目前项目已完成的核心功能包括：</p>
+<ol>
+<li>
+<p>后端架构搭建：</p>
+<ul>
+<li>完整的用户认证系统</li>
+<li>题目生成引擎</li>
+<li>练习管理模块</li>
+<li>AI评价服务</li>
+</ul>
+</li>
+<li>
+<p>前端基础功能：</p>
+<ul>
+<li>用户登录界面</li>
+<li>练习创建模块</li>
+<li>答题交互界面</li>
+<li>AI反馈展示</li>
+</ul>
+</li>
+</ol>
+<p>（技术亮点）<br>
+重点要介绍几个技术亮点：</p>
+<ol>
+<li>
+<p>算术题目生成：使用算术树结构和工厂模式，能够生成难度可控、形式多样的题目。</p>
+</li>
+<li>
+<p>灵活的评分系统：通过策略模式实现多维度评分，可以根据用户水平和题目难度动态调整。</p>
+</li>
+<li>
+<p>AI反馈机制：使用SSE（Server-Sent Events）实现流式响应，提供实时的练习评价。</p>
+</li>
+</ol>
+<p>（后续计划）<br>
+下一阶段的工作重点是：</p>
+<ol>
+<li>完善前端用户体验</li>
+<li>添加练习数据统计和分析功能</li>
+<li>优化AI反馈的质量</li>
+<li>增加更多题型支持</li>
+</ol>
+<p>（结束语）<br>
+以上是本项目的中期进展汇报。这个系统虽然还在开发中，但核心架构已经搭建完成，后续将重点完善功能细节和提升用户体验。"</p>
+<p>补充说明：</p>
+<ol>
+<li>汇报时保持自然、从容的语气</li>
+<li>可以适当调整语速，重点内容稍微放慢</li>
+<li>准备一些技术细节的补充说明，以应对可能的提问</li>
+<li>如果有投影片，确保和口述内容同步展示</li>
+<li>重点强调已完成的核心功能，对未完成的部分可以简要说明计划</li>
+</ol>
+<p>这样的汇报思路清晰、重点突出，相信能够很好地展示你的工作成果。祝你汇报顺利！</p>
+<hr>
+<p>好的，我来整理一个便于口述的版本：</p>
+<p>"我们的项目采用了前后端分离的架构。从整体框架来看：</p>
+<p>后端部分我们使用FastAPI框架，整体分为几个主要模块：</p>
+<ul>
+<li>API层，用于处理所有的HTTP请求，包括用户认证、练习管理等接口</li>
+<li>核心逻辑层，这里实现了我们最重要的功能：题目生成器、算术树和评分策略</li>
+<li>数据层，包括数据库模型和数据验证</li>
+<li>服务层，处理具体的业务逻辑</li>
+<li>工具层，提供一些通用的功能函数</li>
+</ul>
+<p>前端部分使用React框架，主要包含：</p>
+<ul>
+<li>API模块，负责与后端通信</li>
+<li>可复用的组件，比如AI设置对话框、反馈预览等</li>
+<li>状态管理模块，处理用户登录状态</li>
+<li>具体的页面组件，包括登录页面、创建练习页面和答题页面</li>
+</ul>
+<p>这种架构让我们能够：</p>
+<ul>
+<li>清晰地划分每个模块的职责</li>
+<li>方便地维护和扩展功能</li>
+<li>独立开发前端和后端</li>
+<li>复用通用的功能组件</li>
+</ul>
+<p>有了这个基础架构，我们就可以实现完整的练习流程..."</p>
+<p>这样的介绍比较自然，方便口述，也为后面的功能演示做了铺垫。你可以配合在屏幕上展示项目的目录结构，这样听众既能听懂整体架构，又能直观地看到具体的文件组织。</p>
+<hr>
+<p>好的，我来重点介绍目前已经实现并测试通过的功能和API：</p>
+<p>"关于项目的具体进展，目前我们已经完成了基础功能的前后端联调测试。让我详细介绍一下：</p>
+<ol>
+<li>
+<p>用户认证相关：</p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>POST /api/v1/auth/login    # 用户登录接口
+</code></pre><p>这个接口我们已经完成测试，实现了基于JWT的token认证机制。用户登录后会获取token，后续所有API请求都会带上这个token进行身份验证。</p>
+</li>
+<li>
+<p>练习核心流程相关：</p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>POST /api/v1/exercises             # 创建新练习
+GET  /api/v1/exercises/{id}        # 获取练习详情
+POST /api/v1/exercises/{id}/questions/{question_id}/answer  # 提交答案
+POST /api/v1/exercises/{id}/complete  # 完成练习
+</code></pre><p>这是我们重点测试的部分。创建练习时，可以：</p>
+<ul>
+<li>选择难度级别（简单/中等/困难）</li>
+<li>设置数值范围</li>
+<li>选择运算符（加减乘除）</li>
+<li>指定题目数量</li>
+</ul>
+</li>
+<li>
+<p>AI点评功能：</p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>POST /api/v1/exercises/ai/initialize  # 初始化AI服务
+GET  /api/v1/exercises/{id}/ai-feedback  # 获取AI反馈
+</code></pre><p>我们使用POE API实现了AI点评功能，特别是采用了SSE（Server-Sent Events）技术实现流式响应，可以实时显示AI反馈内容。</p>
+</li>
+</ol>
+<p>在前端方面，目前完成了与这些API对应的基础界面：</p>
+<ol>
+<li>登录页面：实现了基本的登录功能</li>
+<li>创建练习页面：可以设置练习参数</li>
+<li>答题页面：实现了题目展示、答案提交、AI反馈显示等功能</li>
+</ol>
+<p>我们已经完成了完整的答题流程测试：</p>
+<ol>
+<li>用户登录</li>
+<li>创建新练习</li>
+<li>逐题作答</li>
+<li>提交答案</li>
+<li>获取AI点评</li>
+</ol>
+<p>当前所有这些基础功能都已经可以正常运行，前后端能够正确通信。下一步计划开发更多功能性的页面，比如练习历史、成绩统计等。"</p>
+<p>这样的介绍直接围绕已实现的功能和测试情况，更加具体和实在。如果评审老师有兴趣，你还可以现场演示一下这些功能的运行效果。</p>
+<p>补充一点：如果你用数据库工具查看过表，可以补充一句"通过SQLite数据库可以看到数据正确保存，用户信息、练习记录和答题数据都完整记录在对应的表中。"这样能进一步证明系统功能的完整性。</p>
+<hr>
+<p>对的，这是很好的补充说明，可以这样介绍：</p>
+<p>"关于用户管理这块，由于前端注册功能还在开发中，目前我们是通过FastAPI自动生成的Swagger文档界面来创建测试用户。具体操作是：</p>
+<ol>
+<li>访问<code>http://localhost:8000/docs</code>，这是FastAPI自动生成的API文档界面</li>
+<li>找到<code>/api/v1/users/</code>的POST接口，请求体格式如下：<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"email"</span><span class="token operator">:</span> <span class="token string">"test@example.com"</span><span class="token punctuation">,</span>
+  <span class="token property">"username"</span><span class="token operator">:</span> <span class="token string">"testuser"</span><span class="token punctuation">,</span>
+  <span class="token property">"password"</span><span class="token operator">:</span> <span class="token string">"testpassword"</span>
+<span class="token punctuation">}</span>
+</code></pre></li>
+<li>点击'Try it out'后执行请求，系统会创建新用户并返回用户信息</li>
+</ol>
+<p>这个接口已经实现了完整的用户创建逻辑：</p>
+<ul>
+<li>密码会自动进行bcrypt加密</li>
+<li>系统会验证邮箱格式</li>
+<li>会检查用户名和邮箱是否已被注册</li>
+</ul>
+<p>虽然目前用户注册还需要通过Swagger接口完成，但用户登录功能在前端已经实现，创建好的用户可以直接在前端登录页面进行登录测试。这个临时的解决方案让我们能够进行其他功能的开发和测试，而不会被前端注册页面的开发阻塞。"</p>
+<p>这样的说明既展示了当前的开发状态，也说明了我们采用的临时解决方案，显得更加专业和务实。同时也暗示了我们后续会完善前端的注册功能。</p>
+<hr>
+<p>好的，可以这样介绍Swagger UI界面：</p>
+<p>"FastAPI为我们自动生成了一个交互式的API文档界面，访问<code>http://localhost:8000/docs</code>就能看到。这个界面对于API开发和测试非常有帮助，我来简单介绍一下如何查看和使用：</p>
+<ol>
+<li>
+<p>整体结构：</p>
+<ul>
+<li>页面顶部显示API版本和项目描述</li>
+<li>所有API按功能模块分组，比如<code>authentication</code>、<code>users</code>、<code>exercises</code>等</li>
+<li>每个接口都有不同的颜色标识：
+<ul>
+<li>蓝色表示GET请求</li>
+<li>绿色表示POST请求</li>
+<li>黄色表示PUT请求</li>
+<li>红色表示DELETE请求</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>接口信息展示：</p>
+<ul>
+<li>每个接口都显示完整的URL路径</li>
+<li>需要的权限（比如是否需要token认证）</li>
+<li>请求参数说明</li>
+<li>预期的响应格式</li>
+<li>可能的响应状态码</li>
+</ul>
+</li>
+<li>
+<p>实际操作演示：<br>
+比如我们之前创建用户时用到的<code>POST /api/v1/users/</code>接口：</p>
+<ul>
+<li>点击接口可以展开详细信息</li>
+<li>点击'Try it out'按钮可以实际发送请求</li>
+<li>在Request body中填写JSON格式的参数</li>
+<li>执行后可以看到完整的请求和响应信息</li>
+</ul>
+</li>
+<li>
+<p>权限验证：</p>
+<ul>
+<li>对于需要认证的接口，页面顶部有一个'Authorize'按钮</li>
+<li>可以在那里填入token进行授权</li>
+<li>授权后就能测试需要认证的接口</li>
+</ul>
+</li>
+</ol>
+<p>这个文档界面最大的优势是所见即所得，不仅展示了接口信息，还能直接进行测试。这对我们前后端开发的协作和接口调试都带来了很大便利。"</p>
+<p>这样的介绍重点突出了Swagger UI的实用性，而不是枯燥地列举所有API。而且通过介绍这个工具的使用方法，也侧面展示了我们的开发过程是规范和专业的。</p>
+<hr>
+<p>让我来梳理一下需要认证和不需要认证的接口：</p>
+<p>不需要认证的接口：</p>
+<ol>
+<li>用户注册：<code>POST /api/v1/users/</code></li>
+<li>用户登录：<code>POST /api/v1/auth/login</code></li>
+<li>健康检查：<code>GET /health</code></li>
+</ol>
+<p>需要认证（需要在请求头中带有JWT token）的接口：</p>
+<ol>
+<li>
+<p>用户相关：</p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>GET  /api/v1/users/me          # 获取当前用户信息
+PUT  /api/v1/users/me          # 更新用户信息
+GET  /api/v1/users/me/stats    # 获取用户练习统计
+</code></pre></li>
+<li>
+<p>练习相关（全部需要认证）：</p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>POST /api/v1/exercises/                      # 创建练习
+GET  /api/v1/exercises/                      # 获取练习列表
+GET  /api/v1/exercises/{id}                  # 获取练习详情
+POST /api/v1/exercises/{id}/questions/{id}/answer  # 提交答案
+POST /api/v1/exercises/{id}/complete         # 完成练习
+</code></pre></li>
+<li>
+<p>AI相关（全部需要认证）：</p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>POST /api/v1/exercises/ai/initialize         # 初始化AI服务
+GET  /api/v1/exercises/{id}/ai-feedback      # 获取AI反馈
+POST /api/v1/exercises/{id}/ai-feedback/stop # 停止AI反馈
+</code></pre></li>
+</ol>
+<p>在Swagger UI中测试这些需要认证的接口时，需要：</p>
+<ol>
+<li>先通过登录接口获取token</li>
+<li>点击页面顶部的"Authorize"按钮</li>
+<li>在弹出的对话框中输入<code>Bearer {你的token}</code></li>
+<li>点击"Authorize"按钮完成授权</li>
+<li>之后测试这些接口时就会自动带上认证信息</li>
+</ol>
+<p>这样的认证机制确保了只有登录用户才能访问相关功能，保证了系统的安全性。在前端实现中，我们通过axios拦截器自动为需要认证的请求添加token，使得认证过程对用户来说是无感的。</p>
+<hr>
+<p>在代码中，这些接口的认证需求主要通过以下几个部分来体现：</p>
+<ol>
+<li>首先在<code>app/api/deps.py</code>中定义了OAuth2认证：</li>
+</ol>
+<pre data-role="codeBlock" data-info="python" class="language-python python"><code><span class="token keyword keyword-from">from</span> fastapi<span class="token punctuation">.</span>security <span class="token keyword keyword-import">import</span> OAuth2PasswordBearer
+<span class="token keyword keyword-from">from</span> <span class="token punctuation">.</span><span class="token punctuation">.</span>config <span class="token keyword keyword-import">import</span> settings
+
+<span class="token comment"># 定义了OAuth2认证，指定token获取的URL</span>
+oauth2_scheme <span class="token operator">=</span> OAuth2PasswordBearer<span class="token punctuation">(</span>tokenUrl<span class="token operator">=</span><span class="token string-interpolation"><span class="token string">f"</span><span class="token interpolation"><span class="token punctuation">{</span>settings<span class="token punctuation">.</span>API_V1_STR<span class="token punctuation">}</span></span><span class="token string">/auth/login"</span></span><span class="token punctuation">)</span>
+
+<span class="token comment"># 获取当前用户的依赖函数</span>
+<span class="token keyword keyword-def">def</span> <span class="token function">get_current_user</span><span class="token punctuation">(</span>
+    db<span class="token punctuation">:</span> Session <span class="token operator">=</span> Depends<span class="token punctuation">(</span>get_db<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    token<span class="token punctuation">:</span> <span class="token builtin">str</span> <span class="token operator">=</span> Depends<span class="token punctuation">(</span>oauth2_scheme<span class="token punctuation">)</span>  <span class="token comment"># 这里要求提供token</span>
+<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">&gt;</span> User<span class="token punctuation">:</span>
+    credentials_exception <span class="token operator">=</span> HTTPException<span class="token punctuation">(</span>
+        status_code<span class="token operator">=</span>status<span class="token punctuation">.</span>HTTP_401_UNAUTHORIZED<span class="token punctuation">,</span>
+        detail<span class="token operator">=</span><span class="token string">"Could not validate credentials"</span><span class="token punctuation">,</span>
+        headers<span class="token operator">=</span><span class="token punctuation">{</span><span class="token string">"WWW-Authenticate"</span><span class="token punctuation">:</span> <span class="token string">"Bearer"</span><span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">)</span>
+    <span class="token comment"># ... token验证逻辑</span>
+</code></pre><ol start="2">
+<li>然后在需要认证的API路由中，通过<code>Depends</code>依赖注入使用这个认证：</li>
+</ol>
+<pre data-role="codeBlock" data-info="python" class="language-python python"><code><span class="token comment"># app/api/v1/exercises.py</span>
+<span class="token decorator annotation punctuation">@router<span class="token punctuation">.</span>post</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">,</span> response_model<span class="token operator">=</span>schemas<span class="token punctuation">.</span>ExerciseResponse<span class="token punctuation">)</span>
+<span class="token keyword keyword-def">def</span> <span class="token function">create_exercise</span><span class="token punctuation">(</span>
+    <span class="token operator">*</span><span class="token punctuation">,</span>
+    db<span class="token punctuation">:</span> Session <span class="token operator">=</span> Depends<span class="token punctuation">(</span>get_db<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    exercise_in<span class="token punctuation">:</span> schemas<span class="token punctuation">.</span>ExerciseCreate<span class="token punctuation">,</span>
+    current_user<span class="token punctuation">:</span> User <span class="token operator">=</span> Depends<span class="token punctuation">(</span>get_current_active_user<span class="token punctuation">)</span>  <span class="token comment"># 这里要求认证</span>
+<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">&gt;</span> Any<span class="token punctuation">:</span>
+    <span class="token comment"># ...</span>
+</code></pre><pre data-role="codeBlock" data-info="python" class="language-python python"><code><span class="token comment"># app/api/v1/users.py</span>
+<span class="token decorator annotation punctuation">@router<span class="token punctuation">.</span>get</span><span class="token punctuation">(</span><span class="token string">"/me"</span><span class="token punctuation">,</span> response_model<span class="token operator">=</span>schemas<span class="token punctuation">.</span>UserResponse<span class="token punctuation">)</span>
+<span class="token keyword keyword-def">def</span> <span class="token function">read_user_me</span><span class="token punctuation">(</span>
+    db<span class="token punctuation">:</span> Session <span class="token operator">=</span> Depends<span class="token punctuation">(</span>get_db<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    current_user<span class="token punctuation">:</span> User <span class="token operator">=</span> Depends<span class="token punctuation">(</span>get_current_active_user<span class="token punctuation">)</span>  <span class="token comment"># 这里要求认证</span>
+<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">&gt;</span> Any<span class="token punctuation">:</span>
+    <span class="token comment"># ...</span>
+</code></pre><ol start="3">
+<li>不需要认证的接口则不会使用这个依赖，比如登录接口：</li>
+</ol>
+<pre data-role="codeBlock" data-info="python" class="language-python python"><code><span class="token comment"># app/api/v1/auth.py</span>
+<span class="token decorator annotation punctuation">@router<span class="token punctuation">.</span>post</span><span class="token punctuation">(</span><span class="token string">"/login"</span><span class="token punctuation">,</span> response_model<span class="token operator">=</span>Token<span class="token punctuation">)</span>
+<span class="token keyword keyword-def">def</span> <span class="token function">login</span><span class="token punctuation">(</span>
+    db<span class="token punctuation">:</span> Session <span class="token operator">=</span> Depends<span class="token punctuation">(</span>get_db<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    form_data<span class="token punctuation">:</span> OAuth2PasswordRequestForm <span class="token operator">=</span> Depends<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">&gt;</span> Any<span class="token punctuation">:</span>
+    <span class="token comment"># ... 这里没有使用current_user依赖</span>
+</code></pre><p>所以看一个接口是否需要认证，关键是看它的参数里有没有<code>current_user: User = Depends(get_current_active_user)</code>这个依赖。这个依赖会检查请求头中的<code>Authorization: Bearer {token}</code>，如果没有token或token无效，就会返回401未授权错误。</p>
+<p>这个机制是FastAPI的标准OAuth2实现，所以在Swagger UI中它也会自动识别哪些接口需要认证，并在接口文档中用一个小锁图标标注出来。</p>
+<hr>
+<p>啊对，我之前说错了，对于FastAPI的OAuth2 Password Bearer认证，在Swagger UI中不是直接填token，而是填用户名和密码：</p>
+<ol>
+<li>
+<p>在弹出的授权对话框中：</p>
+<ul>
+<li><code>username</code>填写邮箱（比如<code>test@example.com</code>）</li>
+<li><code>password</code>填写密码（比如<code>testpassword</code>）</li>
+<li>其他字段（client_id和client_secret）保持空白</li>
+<li>点击"Authorize"按钮</li>
+</ul>
+</li>
+<li>
+<p>授权成功后，Swagger UI会自动：</p>
+<ul>
+<li>调用登录接口获取token</li>
+<li>将token保存下来</li>
+<li>后续的请求自动带上这个token</li>
+</ul>
+</li>
+</ol>
+<p>所以实际使用时比我之前说的更简单，不需要手动复制粘贴token。这也是为什么登录接口的路径会显示在<code>Token URL</code>那里。</p>
+<p>通过这种方式授权后，Swagger UI界面中需要认证的接口（带小锁图标的）就都可以直接测试了。如果看到接口返回401未授权错误，可以：</p>
+<ol>
+<li>检查是否已经授权（页面顶部的小锁图标是否是锁上的状态）</li>
+<li>如果已授权但还是报错，可以点击"Authorize"按钮重新输入账号密码授权</li>
+</ol>
+<p>这种方式更符合OAuth2的标准流程，也更安全，因为它不会直接暴露token。</p>
+<hr>
+<p>抱歉，我重新修正标点符号：</p>
+<p>"我们可以通过浏览器的开发者工具来查看实际的API调用情况。按F12打开开发者工具，切换到Network面板。这里我们能看到所有前端和后端之间的HTTP请求：</p>
+<ol>
+<li>
+<p>首先是登录过程：</p>
+<ul>
+<li>发送POST请求到<code>/api/v1/auth/login</code></li>
+<li>可以看到请求标头里已经有一个<code>Authorization: Bearer</code>，这个其实是Swagger UI自动加的，用于基本的API访问认证</li>
+<li>请求体是表单格式，包含email和password</li>
+<li>响应中会返回JWT token</li>
+<li>这个token会被前端保存到localStorage中</li>
+</ul>
+</li>
+<li>
+<p>创建练习时：</p>
+<ul>
+<li>发送POST请求到<code>/api/v1/exercises</code></li>
+<li>在请求标头中可以看到<code>Authorization: Bearer {token}</code>，这个token就是登录后获取的</li>
+<li>请求体包含了练习的配置信息</li>
+<li>响应中返回新创建的练习信息</li>
+</ul>
+</li>
+<li>
+<p>提交答案时：</p>
+<ul>
+<li>发送POST请求到<code>.../answer</code>接口</li>
+<li>同样带有认证token</li>
+<li>请求体包含答案和用时</li>
+<li>响应显示答案是否正确</li>
+</ul>
+</li>
+<li>
+<p>特别是在AI反馈这块：</p>
+<ul>
+<li>可以看到这是一个SSE连接</li>
+<li>Response标签页中能看到实时返回的文本块</li>
+<li>体现了流式响应的特点</li>
+</ul>
+</li>
+</ol>
+<p>通过观察这些网络请求，我们可以直观地看到前后端是如何交互的，也能验证认证机制是否正常工作。"</p>
+<p>登录请求标头中的<code>Authorization: Bearer</code>是由FastAPI的OAuth2实现自动添加的，这是OAuth2密码流程的一部分。但这不是我们最终用于API认证的那个token，那个token是在登录成功后从响应中获取的。这一点确实容易造成混淆，需要特别说明一下。</p>
+<hr>
+<p>好的，我来完整描述创建练习的整个流程：</p>
+<p>"以创建练习为例，让我展示完整的前后端交互流程：</p>
+<ol>
+<li>
+<p>首先在前端，用户在创建练习页面（<code>CreateExercise.tsx</code>）填写练习配置：</p>
+<ul>
+<li>选择难度级别：'简单'</li>
+<li>勾选运算符：比如'加法'和'减法'</li>
+<li>设置题目数量：5道</li>
+</ul>
+</li>
+<li>
+<p>点击'创建练习'按钮后，前端会：</p>
+<pre data-role="codeBlock" data-info="typescript" class="language-typescript typescript"><code><span class="token comment">// CreateExercise.tsx中的handleSubmit函数</span>
+<span class="token keyword keyword-const">const</span> exercise <span class="token operator">=</span> <span class="token keyword keyword-await">await</span> exercises<span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  difficulty<span class="token operator">:</span> <span class="token string">'简单'</span><span class="token punctuation">,</span>
+  number_range<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">100</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  operator_types<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'+'</span><span class="token punctuation">,</span> <span class="token string">'-'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  question_count<span class="token operator">:</span> <span class="token number">5</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre></li>
+<li>
+<p>这个请求会经过axios实例的处理：</p>
+<pre data-role="codeBlock" data-info="typescript" class="language-typescript typescript"><code><span class="token comment">// api/index.ts</span>
+<span class="token keyword keyword-const">const</span> api <span class="token operator">=</span> axios<span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  baseURL<span class="token operator">:</span> <span class="token string">'http://localhost:8000/api/v1'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 请求拦截器自动添加token</span>
+api<span class="token punctuation">.</span>interceptors<span class="token punctuation">.</span>request<span class="token punctuation">.</span><span class="token function">use</span><span class="token punctuation">(</span><span class="token punctuation">(</span>config<span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">{</span>
+  <span class="token keyword keyword-const">const</span> token <span class="token operator">=</span> localStorage<span class="token punctuation">.</span><span class="token function">getItem</span><span class="token punctuation">(</span><span class="token string">'token'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword keyword-if">if</span> <span class="token punctuation">(</span>token<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    config<span class="token punctuation">.</span>headers<span class="token punctuation">.</span>Authorization <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Bearer </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>token<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword keyword-return">return</span> config<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre></li>
+<li>
+<p>后端收到请求后，首先经过认证中间件：</p>
+<pre data-role="codeBlock" data-info="python" class="language-python python"><code><span class="token comment"># api/deps.py中的get_current_user函数</span>
+<span class="token comment"># 验证请求头中的token是否有效</span>
+<span class="token comment"># 解析token获取用户信息</span>
+</code></pre></li>
+<li>
+<p>认证通过后，请求到达练习创建的路由处理函数：</p>
+<pre data-role="codeBlock" data-info="python" class="language-python python"><code><span class="token comment"># api/v1/exercises.py</span>
+<span class="token decorator annotation punctuation">@router<span class="token punctuation">.</span>post</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">)</span>
+<span class="token keyword keyword-def">def</span> <span class="token function">create_exercise</span><span class="token punctuation">(</span>
+    db<span class="token punctuation">:</span> Session<span class="token punctuation">,</span>
+    exercise_in<span class="token punctuation">:</span> ExerciseCreate<span class="token punctuation">,</span>
+    current_user<span class="token punctuation">:</span> User
+<span class="token punctuation">)</span><span class="token punctuation">:</span>
+</code></pre></li>
+<li>
+<p>然后调用<code>ExerciseService</code>进行实际的练习创建：</p>
+<pre data-role="codeBlock" data-info="python" class="language-python python"><code><span class="token comment"># services/exercise_service.py</span>
+<span class="token keyword keyword-def">def</span> <span class="token function">create_exercise</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> user_id<span class="token punctuation">:</span> <span class="token builtin">int</span><span class="token punctuation">,</span> exercise_in<span class="token punctuation">:</span> ExerciseCreate<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 1. 创建练习记录</span>
+    db_exercise <span class="token operator">=</span> Exercise<span class="token punctuation">(</span>
+        user_id<span class="token operator">=</span>user_id<span class="token punctuation">,</span>
+        difficulty<span class="token operator">=</span>exercise_in<span class="token punctuation">.</span>difficulty<span class="token punctuation">,</span>
+        <span class="token comment"># ...其他字段</span>
+    <span class="token punctuation">)</span>
+    
+    <span class="token comment"># 2. 使用题目生成器创建题目</span>
+    generator <span class="token operator">=</span> QuestionGenerator<span class="token punctuation">(</span>
+        exercise_in<span class="token punctuation">.</span>difficulty<span class="token punctuation">,</span>
+        exercise_in<span class="token punctuation">.</span>number_range<span class="token punctuation">,</span>
+        exercise_in<span class="token punctuation">.</span>operator_types
+    <span class="token punctuation">)</span>
+    
+    <span class="token comment"># 3. 生成指定数量的题目</span>
+    <span class="token keyword keyword-for">for</span> _ <span class="token keyword keyword-in">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span>exercise_in<span class="token punctuation">.</span>question_count<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        content<span class="token punctuation">,</span> answer<span class="token punctuation">,</span> operators<span class="token punctuation">,</span> tree <span class="token operator">=</span> generator<span class="token punctuation">.</span>generate_question<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        db_question <span class="token operator">=</span> Question<span class="token punctuation">(</span>
+            exercise_id<span class="token operator">=</span>db_exercise<span class="token punctuation">.</span><span class="token builtin">id</span><span class="token punctuation">,</span>
+            content<span class="token operator">=</span>content<span class="token punctuation">,</span>
+            correct_answer<span class="token operator">=</span>answer<span class="token punctuation">,</span>
+            <span class="token comment"># ...其他字段</span>
+        <span class="token punctuation">)</span>
+        questions<span class="token punctuation">.</span>append<span class="token punctuation">(</span>db_question<span class="token punctuation">)</span>
+</code></pre></li>
+<li>
+<p>最后，数据保存到数据库，并返回响应：</p>
+<ul>
+<li>练习基本信息保存到<code>exercises</code>表</li>
+<li>生成的题目保存到<code>questions</code>表</li>
+<li>返回完整的练习信息给前端</li>
+</ul>
+</li>
+<li>
+<p>前端收到响应后，通过<code>react-router</code>跳转到练习页面：</p>
+<pre data-role="codeBlock" data-info="typescript" class="language-typescript typescript"><code><span class="token function">navigate</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">/exercise/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>exercise<span class="token punctuation">.</span>id<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre></li>
+</ol>
+<p>通过开发者工具的Network面板，我们可以看到这个POST请求：</p>
+<ul>
+<li>请求地址：<code>http://localhost:8000/api/v1/exercises</code></li>
+<li>请求方法：POST</li>
+<li>请求标头：包含<code>Authorization: Bearer {token}</code></li>
+<li>请求体：包含练习配置的JSON数据</li>
+<li>响应：包含新创建的练习完整信息，包括生成的题目</li>
+</ul>
+<p>这就是一个完整的前后端交互流程，体现了分层架构的特点：前端界面层、API路由层、服务层、数据持久层都各司其职。"</p>
+<p>这样的描述既展示了代码层面的实现，又说明了实际的执行流程，同时还能配合开发者工具来直观地展示。</p>
+<hr>
+<p>好的，可以这样介绍Swagger UI中的Schemas部分：</p>
+<p>"在Swagger UI的底部，有一个Schemas部分，这里展示了我们系统中所有的数据模型结构。这些模型是通过Pydantic定义的，用于请求和响应的数据验证。我们来看几个主要的模型：</p>
+<ol>
+<li>
+<p>练习相关的模型：</p>
+<pre data-role="codeBlock" data-info="python" class="language-python python"><code>ExerciseCreate <span class="token punctuation">{</span>
+  difficulty<span class="token operator">*</span><span class="token punctuation">:</span> <span class="token string">'简单'</span> <span class="token operator">|</span> <span class="token string">'中等'</span> <span class="token operator">|</span> <span class="token string">'困难'</span>
+  number_range<span class="token operator">*</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>integer<span class="token punctuation">,</span> integer<span class="token punctuation">]</span>  <span class="token comment"># 数值范围</span>
+  operator_types<span class="token operator">*</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">'+'</span> <span class="token operator">|</span> <span class="token string">'-'</span> <span class="token operator">|</span> <span class="token string">'*'</span> <span class="token operator">|</span> <span class="token string">'/'</span><span class="token punctuation">]</span>  <span class="token comment"># 运算符列表</span>
+  question_count<span class="token operator">*</span><span class="token punctuation">:</span> integer  <span class="token comment"># 题目数量</span>
+<span class="token punctuation">}</span>
+
+ExerciseResponse <span class="token punctuation">{</span>
+  <span class="token builtin">id</span><span class="token operator">*</span><span class="token punctuation">:</span> integer
+  user_id<span class="token operator">*</span><span class="token punctuation">:</span> integer
+  difficulty<span class="token operator">*</span><span class="token punctuation">:</span> string
+  number_range<span class="token operator">*</span><span class="token punctuation">:</span> array
+  operator_types<span class="token operator">*</span><span class="token punctuation">:</span> array
+  created_at<span class="token operator">*</span><span class="token punctuation">:</span> string<span class="token punctuation">(</span>$date<span class="token operator">-</span>time<span class="token punctuation">)</span>
+  completed_at<span class="token punctuation">:</span> string<span class="token punctuation">(</span>$date<span class="token operator">-</span>time<span class="token punctuation">)</span> <span class="token operator">|</span> null
+  final_score<span class="token punctuation">:</span> number <span class="token operator">|</span> null
+  total_time<span class="token punctuation">:</span> integer <span class="token operator">|</span> null
+  ai_feedback<span class="token punctuation">:</span> string <span class="token operator">|</span> null
+  questions<span class="token operator">*</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>QuestionResponse<span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre></li>
+<li>
+<p>题目相关的模型：</p>
+<pre data-role="codeBlock" data-info="python" class="language-python python"><code>QuestionResponse <span class="token punctuation">{</span>
+  <span class="token builtin">id</span><span class="token operator">*</span><span class="token punctuation">:</span> integer
+  exercise_id<span class="token operator">*</span><span class="token punctuation">:</span> integer
+  content<span class="token operator">*</span><span class="token punctuation">:</span> string  <span class="token comment"># 题目内容</span>
+  correct_answer<span class="token operator">*</span><span class="token punctuation">:</span> number
+  user_answer<span class="token punctuation">:</span> number <span class="token operator">|</span> null
+  time_spent<span class="token punctuation">:</span> integer <span class="token operator">|</span> null
+  is_correct<span class="token punctuation">:</span> boolean <span class="token operator">|</span> null
+<span class="token punctuation">}</span>
+</code></pre></li>
+</ol>
+<p>这些模型定义了：</p>
+<ul>
+<li>创建练习时需要提供哪些参数（<code>ExerciseCreate</code>）</li>
+<li>服务器会返回什么数据（<code>ExerciseResponse</code>）</li>
+<li>每个字段的类型要求</li>
+<li>哪些字段是必需的（带星号*）</li>
+<li>哪些字段是可选的</li>
+</ul>
+<p>通过这些模型定义，前端开发人员可以清楚地知道：</p>
+<ol>
+<li>调用API时需要传什么数据</li>
+<li>会得到什么格式的响应</li>
+<li>每个字段的类型限制</li>
+</ol>
+<p>这种接口文档是自动从代码生成的，所以永远和实际代码保持同步，避免了手动编写文档可能带来的不一致问题。"</p>
+<p>这样的介绍既解释了Schemas的作用，又展示了具体的数据结构，能帮助理解系统的数据流动。特别是对前后端协作来说，这种自动生成的接口文档非常重要。</p>
+<hr>
+<p>让我看一下相关的代码：</p>
+<pre data-role="codeBlock" data-info="python" class="language-python python"><code><span class="token comment"># app/schemas/exercise.py</span>
+<span class="token keyword keyword-class">class</span> <span class="token class-name">ExerciseBase</span><span class="token punctuation">(</span>BaseModel<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    difficulty<span class="token punctuation">:</span> DifficultyLevel
+    number_range<span class="token punctuation">:</span> Tuple<span class="token punctuation">[</span><span class="token builtin">int</span><span class="token punctuation">,</span> <span class="token builtin">int</span><span class="token punctuation">]</span> <span class="token operator">=</span> Field<span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">,</span> description<span class="token operator">=</span><span class="token string">"数值范围 [最小值, 最大值]"</span><span class="token punctuation">)</span>
+    operator_types<span class="token punctuation">:</span> List<span class="token punctuation">[</span>OperatorType<span class="token punctuation">]</span>
+
+    <span class="token decorator annotation punctuation">@field_validator</span><span class="token punctuation">(</span><span class="token string">'number_range'</span><span class="token punctuation">)</span>
+    <span class="token keyword keyword-def">def</span> <span class="token function">validate_number_range</span><span class="token punctuation">(</span>cls<span class="token punctuation">,</span> v<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword keyword-if">if</span> <span class="token builtin">len</span><span class="token punctuation">(</span>v<span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">2</span><span class="token punctuation">:</span>
+            <span class="token keyword keyword-raise">raise</span> ValueError<span class="token punctuation">(</span><span class="token string">'数值范围必须包含两个值 [min, max]'</span><span class="token punctuation">)</span>
+        <span class="token keyword keyword-if">if</span> v<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">&gt;=</span> v<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+            <span class="token keyword keyword-raise">raise</span> ValueError<span class="token punctuation">(</span><span class="token string">'最小值必须小于最大值'</span><span class="token punctuation">)</span>
+        <span class="token keyword keyword-return">return</span> v
+
+    <span class="token decorator annotation punctuation">@field_validator</span><span class="token punctuation">(</span><span class="token string">'operator_types'</span><span class="token punctuation">)</span>
+    <span class="token keyword keyword-def">def</span> <span class="token function">validate_operator_types</span><span class="token punctuation">(</span>cls<span class="token punctuation">,</span> v<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword keyword-if">if</span> <span class="token keyword keyword-not">not</span> v<span class="token punctuation">:</span>
+            <span class="token keyword keyword-raise">raise</span> ValueError<span class="token punctuation">(</span><span class="token string">'至少需要选择一种运算符'</span><span class="token punctuation">)</span>
+        <span class="token keyword keyword-return">return</span> v
+
+<span class="token keyword keyword-class">class</span> <span class="token class-name">ExerciseCreate</span><span class="token punctuation">(</span>ExerciseBase<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    question_count<span class="token punctuation">:</span> <span class="token builtin">int</span> <span class="token operator">=</span> Field<span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">,</span> gt<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">,</span> le<span class="token operator">=</span><span class="token number">100</span><span class="token punctuation">,</span> description<span class="token operator">=</span><span class="token string">"题目数量"</span><span class="token punctuation">)</span>
+</code></pre><p>啊，这里需要说明一下：在Pydantic模型中，如果一个字段没有设置默认值（比如<code>= None</code>或其他默认值），那么这个字段默认就是必需的。只有显式给定了默认值的字段才是可选的。</p>
+<p>所以在这个例子中：</p>
+<ul>
+<li><code>difficulty: DifficultyLevel</code> - 没有默认值，所以是必需的</li>
+<li><code>number_range: Tuple[int, int] = Field(...)</code> - 使用<code>...</code>表示必需</li>
+<li><code>operator_types: List[OperatorType]</code> - 没有默认值，所以是必需的</li>
+<li><code>question_count: int = Field(...)</code> - 使用<code>...</code>表示必需</li>
+</ul>
+<p>如果我们想让某个字段变成可选的，需要这样写：</p>
+<pre data-role="codeBlock" data-info="python" class="language-python python"><code><span class="token keyword keyword-class">class</span> <span class="token class-name">ExerciseBase</span><span class="token punctuation">(</span>BaseModel<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    difficulty<span class="token punctuation">:</span> Optional<span class="token punctuation">[</span>DifficultyLevel<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">None</span>
+    number_range<span class="token punctuation">:</span> Tuple<span class="token punctuation">[</span><span class="token builtin">int</span><span class="token punctuation">,</span> <span class="token builtin">int</span><span class="token punctuation">]</span> <span class="token operator">=</span> Field<span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">,</span> description<span class="token operator">=</span><span class="token string">"数值范围 [最小值, 最大值]"</span><span class="token punctuation">)</span>
+    operator_types<span class="token punctuation">:</span> List<span class="token punctuation">[</span>OperatorType<span class="token punctuation">]</span> <span class="token operator">=</span> Field<span class="token punctuation">(</span>default_factory<span class="token operator">=</span><span class="token builtin">list</span><span class="token punctuation">)</span>
+</code></pre><p>这样<code>difficulty</code>和<code>operator_types</code>就变成可选字段了。我刚才说得不够准确，<code>Field</code>不是用来标记必填的，而是用来添加额外的验证规则和描述信息的。字段是否必填主要取决于：</p>
+<ol>
+<li>是否用<code>Optional</code>修饰</li>
+<li>是否有默认值</li>
+<li>如果使用<code>Field</code>，是设置了默认值还是使用了<code>...</code></li>
+</ol>
+<p>这就是为什么在Swagger UI中所有这些字段都显示为必需的。</p>
+<hr>
+<p>我建议按照这个顺序来讲：</p>
+<ol>
+<li>
+<p>项目基本情况（1-2分钟）：</p>
+<ul>
+<li>"目前我们已经完成了数学练习系统的基础架构搭建和核心功能实现"</li>
+<li>"采用前后端分离架构，后端使用FastAPI，前端使用React"</li>
+<li>"已经实现了用户认证、题目生成、练习管理和AI点评等核心功能"</li>
+</ul>
+</li>
+<li>
+<p>演示功能（3-4分钟）：</p>
+<ul>
+<li>先打开Swagger UI：<code>http://localhost:8000/docs</code></li>
+<li>展示如何创建测试用户（POST <code>/api/v1/users/</code>）</li>
+<li>展示用户登录流程</li>
+<li>同时打开浏览器开发者工具的Network面板</li>
+<li>创建练习并展示整个过程中的API调用</li>
+<li>可以实际做几道题展示系统运行效果</li>
+</ul>
+</li>
+<li>
+<p>技术细节（2-3分钟）：</p>
+<ul>
+<li>以创建练习为例，展示完整的前后端交互流程</li>
+<li>结合开发者工具说明token认证机制</li>
+<li>简单介绍Swagger UI的Schemas部分，说明接口文档的自动生成</li>
+</ul>
+</li>
+</ol>
+<p>这样的演示：</p>
+<ul>
+<li>时间控制在8-10分钟左右</li>
+<li>重点突出已完成的功能</li>
+<li>通过实际操作展示系统工作流程</li>
+<li>适当展示技术细节但不会太深入</li>
+</ul>
+<p>不建议讲的内容：</p>
+<ul>
+<li>不需要详细解释代码实现</li>
+<li>不用介绍还未实现的功能</li>
+<li>不用说明后续开发计划</li>
+<li>避免过多技术术语</li>
+</ul>
+<p>如果评审老师有兴趣，再针对具体问题展开讲解。这样的演示既能展示项目进展，又不会显得枯燥。</p>
+<hr>
+<p>好的，可以这样说明代码量的进展：</p>
+<p>"关于项目进度，我们在开题时预期的工作量是6000-7000行代码。目前项目的代码量统计如下：</p>
+<p>后端（约2000行）：</p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>app/
+├── api/          # API路由层：约400行
+├── core/         # 核心业务逻辑：约600行
+├── models/       # 数据模型：约200行
+├── schemas/      # 数据验证：约300行
+├── services/     # 服务层：约400行
+└── utils/        # 工具函数：约100行
+</code></pre><p>前端（约800行）：</p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>src/
+├── api/          # API调用：约150行
+├── components/   # UI组件：约300行
+├── contexts/     # 上下文：约100行
+├── pages/        # 页面：约250行
+</code></pre><p>目前完成了近3000行代码，占预期工作量的40-45%左右。考虑到我们已经完成了：</p>
+<ul>
+<li>整体架构的搭建</li>
+<li>核心功能的实现</li>
+<li>基础设施的配置</li>
+</ul>
+<p>这个进度是符合预期的。剩余的工作量主要在：</p>
+<ul>
+<li>更多的前端页面和交互功能</li>
+<li>数据统计和可视化</li>
+<li>系统优化和完善"</li>
+</ul>
+<p>这样既能说明当前的进度，也能表明项目的规模是经过合理预估的。</p>
+
+      </div>
+      
+      
+    
+    
+    
+    
+    
+    
+  
+    </body></html>

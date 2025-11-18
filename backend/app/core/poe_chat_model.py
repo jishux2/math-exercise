@@ -256,6 +256,7 @@ class PoeChatModel(BaseChatModel):
                 # 更新文本累计值，为下一轮检测做准备
                 accumulated_text = current_full_text
             
+            print(f"标题: {chunk['title']}")
             # 生成完成后，如果需要截断，保存待处理信息
             # 实际编辑会在下一轮发送消息前执行，此时WebSocket推送已稳定
             if should_truncate and ai_message_id:

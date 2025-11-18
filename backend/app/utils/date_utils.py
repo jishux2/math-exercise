@@ -1,9 +1,42 @@
 from datetime import datetime, timezone, timedelta
-from typing import Optional
+from typing import Optional, Tuple
+
+try:
+    from zoneinfo import ZoneInfo  # Python 3.9+
+    _CN_TZ = ZoneInfo("Asia/Shanghai")
+except Exception:
+    # 回退到固定东八区（无IANA数据库时）
+    _CN_TZ = timezone(timedelta(hours=8))
 
 def get_utc_now() -> datetime:
-    """获取当前UTC时间"""
+    """获取当前UTC时间（aware）"""
     return datetime.now(timezone.utc)
+
+def get_cn_now(aware: bool = False) -> datetime:
+    """获取当前中国时区时间。
+
+    Args:
+        aware: 为True返回带tzinfo的aware时间；为False返回naive本地时间（默认）。
+    """
+    now = datetime.now(_CN_TZ)
+    return now if aware else now.replace(tzinfo=None)
+
+def cn_today_start_end(aware: bool = False) -> Tuple[datetime, datetime]:
+    """获取中国时区“今天”的起止时间。
+
+    Returns:
+        (start, end): 当天00:00:00 和 23:59:59.999999
+    """
+    now = get_cn_now(aware=True)
+    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+    if aware:
+        return start, end
+    return start.replace(tzinfo=None), end.replace(tzinfo=None)
+
+def cn_today_date() -> datetime.date:
+    """获取中国时区“今天”的日期对象。"""
+    return get_cn_now(aware=True).date()
 
 def format_duration(seconds: int) -> str:
     """

@@ -237,3 +237,35 @@ class ExerciseStats(BaseModel):
     total_time: int          # 总用时（秒）
     score_history: List[dict] # 历史练习记录，格式：
                              # [{"date": "YYYY-MM-DD", "score": 85.5}, ...]
+
+
+# ==== 错题本相关模型 ====
+
+class WrongQuestion(BaseModel):
+    """错题项（学生答错过的题目）"""
+    id: int
+    exercise_id: int
+    content: str
+    correct_answer: float
+    user_answer: Optional[float] = None
+    operator_types: List[OperatorType]
+    difficulty: DifficultyLevel
+    number_range: Tuple[int, int]
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+class WrongQuestionListResponse(BaseModel):
+    items: List[WrongQuestion]
+    total: int
+    page: int
+    page_size: int
+
+class WrongStats(BaseModel):
+    by_difficulty: dict
+    by_operator: dict
+    trend_14d: List[dict]  # [{"date": "YYYY-MM-DD", "count": n}]
+
+class RepracticeFromWrongsRequest(BaseModel):
+    """从错题创建新练习的请求体"""
+    question_ids: List[int]
+    shuffle: bool = True

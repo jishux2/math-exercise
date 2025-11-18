@@ -1,24 +1,26 @@
 import axios, { AxiosError } from 'axios';
 import { LoginResponse, User, UserRole } from './types';
-import { ExerciseListResponse, ExerciseStats } from './types';
+import { ExerciseListResponse, ExerciseStats, WrongQuestionListResponse, WrongStats } from './types';
 
 const BASE_URL = 'http://localhost:8000/api/v1';
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// 请求拦截器添加token
+// 请求拦截器添加token（避免在生产环境输出日志影响性能）
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     // 确保token格式正确
     config.headers.Authorization = `Bearer ${token}`;
-    // 调试输出
-    console.log('Request headers:', config.headers);
+    // 调试输出（如需排查再开启）
+    // if (process.env.NODE_ENV !== 'production') {
+    //   console.log('Request headers:', config.headers);
+    // }
   }
   return config;
 });
@@ -76,9 +78,14 @@ export const auth = {
       email: string;
       username: string;
       password: string;
-      subjects: string[];
+      profile: {
+        subjects: string[];
+      };
     }) => {
-      const response = await api.post('/users/teachers', data);
+      const response = await api.post('/users/teachers', {
+        ...data,
+        role: UserRole.TEACHER
+      });
       return response.data;
     },
   
@@ -91,14 +98,75 @@ export const auth = {
       const response = await api.post('/users/parents', data);
       return response.data;
     },
+
+    registerStudent: async (data: {
+      email: string;
+      username: string;
+      password: string;
+      profile: {
+        grade: string;
+        class_name: string;
+      };
+    }) => {
+      const requestData = {
+        email: data.email,
+        username: data.username,
+        password: data.password,
+        profile: data.profile,
+        role: UserRole.STUDENT
+      };
+      const response = await api.post('/users/register/students', requestData);
+      return response.data;
+    },
   
     getTeacherStudents: async () => {
-      const response = await api.get('/users/teachers/students');
+      const response = await api.get('/users/me/teacher-students');
       return response.data;
     },
   
     getParentStudents: async () => {
-      const response = await api.get('/users/parents/students');
+      const response = await api.get('/users/me/students');
+      return response.data;
+    },
+
+    getParentStats: async () => {
+      const response = await api.get('/users/me/parent-stats');
+      return response.data;
+    },
+
+    getTeachers: async () => {
+      const response = await api.get('/users/teachers');
+      return response.data;
+    },
+
+    getParents: async () => {
+      const response = await api.get('/users/parents');
+      return response.data;
+    },
+
+    assignTeacher: async (studentId: number, teacherId: number) => {
+      const response = await api.post(`/users/students/${studentId}/teacher/${teacherId}`);
+      return response.data;
+    },
+
+    linkParent: async (studentId: number, parentId: number) => {
+      const response = await api.post(`/users/students/${studentId}/parent/${parentId}`);
+      return response.data;
+    },
+
+    createAdmin: async (data: {
+      email: string;
+      username: string;
+      password: string;
+      is_superuser?: boolean;
+      permissions?: string[];
+    }) => {
+      const response = await api.post('/users/admins', data);
+      return response.data;
+    },
+
+    getAdmins: async (): Promise<User[]> => {
+      const response = await api.get('/users/admins');
       return response.data;
     },
   };
@@ -148,6 +216,24 @@ export const exercises = {
     const response = await api.get('/exercises/stats');
     return response.data;
   },
+
+  getWrongQuestions: async (params: { skip?: number; limit?: number }): Promise<WrongQuestionListResponse> => {
+    const response = await api.get('/exercises/wrong-questions', { params });
+    return response.data;
+  },
+
+  getWrongStats: async (): Promise<WrongStats> => {
+    const response = await api.get('/exercises/wrong-stats');
+    return response.data;
+  },
+
+  repracticeFromWrongQuestions: async (questionIds: number[], shuffle: boolean = true) => {
+    const response = await api.post('/exercises/repractice/wrong-questions', {
+      question_ids: questionIds,
+      shuffle,
+    });
+    return response.data;
+  },
 };
 
 export default api;
@@ -176,14 +262,11 @@ export const ai = {
 
       // 检查响应状态
       if (!response.ok) {
-        // 尝试解析错误响应
-        const errorData = await response.json();
-        throw {
-          response: {
-            status: response.status,
-            data: errorData
-          }
-        };
+          // 尝试解析错误响应并抛出 Error 对象（保留原始响应信息）
+          const errorData = await response.json();
+          const err: any = new Error(errorData?.message || 'AI feedback request failed');
+          err.response = { status: response.status, data: errorData };
+          throw err;
       }
 
       const reader = response.body!.getReader();
@@ -220,5 +303,29 @@ export const ai = {
   stopFeedback: async (exerciseId: number) => {
     const response = await api.post(`/exercises/${exerciseId}/ai-feedback/stop`);
     return response.data;
+  },
+};
+
+
+export const agent = {
+  // 删掉原来的 chatStream 函数
+  
+  // 新增 chat 函数
+  chat: async (
+    payload: {
+      message: string;
+      chat_history?: { role: string; content: string }[];
+      bot_name?: string;
+    },
+    signal: AbortSignal
+  ): Promise<string> => {
+    try {
+      const response = await api.post('/agent/chat', payload, { signal });
+      // 后端返回的数据结构是 { "response": "..." }
+      return response.data.response;
+    } catch (error) {
+      // Axios 会自动处理错误，这里让它继续抛出
+      throw error;
+    }
   },
 };

@@ -63,6 +63,8 @@ class User(Base):
     hashed_password = Column(String)
     # 用户状态标志，用于控制账户的启用/禁用
     is_active = Column(Boolean, default=True)
+    # 是否是超级管理员
+    is_superuser = Column(Boolean, default=False)
     # 用户角色，使用枚举类型确保角色值的合法性
     role = Column(SQLEnum(UserRole))
     # 账户创建时间，自动记录用户注册时间

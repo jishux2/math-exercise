@@ -162,9 +162,9 @@ def main():
     test_cases = [
         # 基础测试：加法
         {
-            "difficulty": DifficultyLevel.EASY,
+            "difficulty": DifficultyLevel.HARD,
             "number_range": (1, 100),
-            "operators": [OperatorType.ADDITION],
+            "operators": [OperatorType.ADDITION, OperatorType.SUBTRACTION, OperatorType.MULTIPLICATION, OperatorType.DIVISION],
         }
     ]
 

@@ -7,6 +7,7 @@ from ..schemas import exercise as schemas
 from ..core.arithmetic_factory import QuestionGenerator
 from ..core.scoring import TimedScoringStrategy, BasicScoringStrategy
 from .base import BaseService
+from ..utils.date_utils import get_cn_now, cn_today_date
 
 
 class ExerciseService(BaseService[Exercise, schemas.ExerciseCreate, schemas.ExerciseUpdate]):
@@ -117,7 +118,7 @@ class ExerciseService(BaseService[Exercise, schemas.ExerciseCreate, schemas.Exer
             difficulty=exercise.difficulty
         )
 
-        exercise.completed_at = datetime.utcnow()
+        exercise.completed_at = get_cn_now()
         exercise.final_score = final_score
         exercise.total_time = sum(q.time_spent or 0 for q in exercise.questions)
 
@@ -135,6 +136,180 @@ class ExerciseService(BaseService[Exercise, schemas.ExerciseCreate, schemas.Exer
         total = query.count()
         exercises = query.order_by(desc(Exercise.created_at)).offset(skip).limit(limit).all()
         return exercises, total
+
+    def create_exercise_from_wrong_questions(self, *, student_id: int, question_ids: list[int], shuffle: bool = True) -> Exercise:
+        """基于指定错题创建新的练习（将题目克隆到新练习中）"""
+        if not question_ids:
+            raise ValueError("No question ids provided")
+
+        # 查询这些题目，确保属于该学生且是错题
+        rows = (
+            self.db.query(Question, Exercise)
+            .join(Exercise, Question.exercise_id == Exercise.id)
+            .filter(
+                Exercise.student_id == student_id,
+                Question.id.in_(question_ids),
+                Question.user_answer.isnot(None),
+                Question.is_correct == False,
+            )
+            .all()
+        )
+        if not rows:
+            raise ValueError("No wrong questions found for current student")
+
+        # 聚合生成新练习的元信息
+        difficulties = {}
+        op_set = set()
+        min_v, max_v = None, None
+        for q, ex in rows:
+            difficulties[str(ex.difficulty.value if hasattr(ex.difficulty, 'value') else ex.difficulty)] = (
+                difficulties.get(str(ex.difficulty.value if hasattr(ex.difficulty, 'value') else ex.difficulty), 0) + 1
+            )
+            for op in (q.operator_types or []):
+                op_set.add(op)
+            if ex.number_range:
+                lo, hi = (ex.number_range if isinstance(ex.number_range, (list, tuple)) else (None, None))
+                if lo is not None and hi is not None:
+                    min_v = lo if min_v is None else min(min_v, lo)
+                    max_v = hi if max_v is None else max(max_v, hi)
+
+        # 选择最常见的难度，否则默认中等
+        top_diff_str = sorted(difficulties.items(), key=lambda x: x[1], reverse=True)[0][0] if difficulties else DifficultyLevel.MEDIUM.value
+        # 将字符串转回 DifficultyLevel
+        try:
+            top_diff = DifficultyLevel(top_diff_str)
+        except Exception:
+            top_diff = DifficultyLevel.MEDIUM
+
+        nr = (min_v if min_v is not None else 1, max_v if max_v is not None else 100)
+        operators = list(op_set) or ["+", "-"]
+
+        # 创建新练习
+        new_ex = Exercise(
+            student_id=student_id,
+            difficulty=top_diff,
+            number_range=list(nr),
+            operator_types=operators,
+        )
+        self.db.add(new_ex)
+        self.db.flush()
+
+        # 生成新题目（克隆原错题的题干与正确答案）
+        import random
+        seq = rows[:]
+        if shuffle:
+            random.shuffle(seq)
+        for q, ex in seq:
+            nq = Question(
+                exercise_id=new_ex.id,
+                content=q.content,
+                correct_answer=q.correct_answer,
+                operator_types=q.operator_types,
+                arithmetic_tree=q.arithmetic_tree,
+            )
+            self.db.add(nq)
+
+        self.db.commit()
+        self.db.refresh(new_ex)
+        return new_ex
+
+    def get_student_wrong_questions(self, student_id: int, skip: int = 0, limit: int = 10):
+        """获取学生的错题列表（分页）"""
+        # 连接 Exercise 与 Question，过滤答错
+        q = (
+            self.db.query(Question, Exercise)
+            .join(Exercise, Question.exercise_id == Exercise.id)
+            .filter(
+                Exercise.student_id == student_id,
+                Question.user_answer.isnot(None),
+                Question.is_correct == False,
+            )
+            .order_by(desc(Exercise.created_at))
+        )
+        total = q.count()
+        rows = q.offset(skip).limit(limit).all()
+        items = []
+        for question, ex in rows:
+            items.append({
+                "id": question.id,
+                "exercise_id": ex.id,
+                "content": question.content,
+                "correct_answer": question.correct_answer,
+                "user_answer": question.user_answer,
+                "operator_types": question.operator_types,
+                "difficulty": ex.difficulty,
+                "number_range": tuple(ex.number_range) if isinstance(ex.number_range, list) else ex.number_range,
+                "created_at": ex.created_at,
+                "completed_at": ex.completed_at,
+            })
+        return items, total
+
+    def get_student_wrong_stats(self, student_id: int):
+        """获取学生错题的聚合统计：按难度、按运算符、近14天趋势"""
+        # 按难度统计
+        by_difficulty = (
+            self.db.query(Exercise.difficulty, func.count(Question.id))
+            .join(Exercise, Question.exercise_id == Exercise.id)
+            .filter(
+                Exercise.student_id == student_id,
+                Question.user_answer.isnot(None),
+                Question.is_correct == False,
+            )
+            .group_by(Exercise.difficulty)
+            .all()
+        )
+        difficulty_dict = {str(k.value if hasattr(k, 'value') else k): v for k, v in by_difficulty}
+
+        # 按运算符统计（operator_types 为 JSON 数组，展开计数）
+        # 简化实现：拉取近 1000 条错题，前端量一般可接受
+        sample_q = (
+            self.db.query(Question.operator_types)
+            .join(Exercise, Question.exercise_id == Exercise.id)
+            .filter(
+                Exercise.student_id == student_id,
+                Question.user_answer.isnot(None),
+                Question.is_correct == False,
+            )
+            .limit(1000)
+            .all()
+        )
+        operator_counter = {}
+        for (ops,) in sample_q:
+            if not ops:
+                continue
+            for op in ops:
+                operator_counter[op] = operator_counter.get(op, 0) + 1
+
+        # 近14天趋势（按练习创建日期统计错题数）
+        from datetime import datetime, timedelta
+        today = cn_today_date()
+        start_date = today - timedelta(days=13)
+        daily_counts = { (start_date + timedelta(days=i)).strftime('%Y-%m-%d'): 0 for i in range(14) }
+
+        trend_rows = (
+            self.db.query(func.date(Exercise.created_at), func.count(Question.id))
+            .join(Exercise, Question.exercise_id == Exercise.id)
+            .filter(
+                Exercise.student_id == student_id,
+                Question.user_answer.isnot(None),
+                Question.is_correct == False,
+                Exercise.created_at >= start_date,
+            )
+            .group_by(func.date(Exercise.created_at))
+            .all()
+        )
+        for d, cnt in trend_rows:
+            key = d.strftime('%Y-%m-%d') if hasattr(d, 'strftime') else str(d)
+            if key in daily_counts:
+                daily_counts[key] = cnt
+
+        trend = [{"date": k, "count": daily_counts[k]} for k in sorted(daily_counts.keys())]
+
+        return {
+            "by_difficulty": difficulty_dict,
+            "by_operator": operator_counter,
+            "trend_14d": trend,
+        }
 
     def get_exercise_stats(self, exercise_id: int) -> dict:
         """获取练习的统计信息"""

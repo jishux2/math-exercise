@@ -15,13 +15,28 @@ import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import CreateExercise from './pages/student/CreateExercise';
 import Exercise from './pages/student/Exercise';
-import TeacherDashboard from './pages/teacher/TeacherDashboard';
-import ParentDashboard from './pages/parent/ParentDashboard';
+
 import Profile from './pages/Profile';
 import ExerciseHistory from './pages/student/ExerciseHistory';
 import MyScores from './pages/student/MyScores';
 import ExerciseResult from './pages/student/ExerciseResult';  // 添加导入
+import WrongBook from './pages/student/WrongBook';
 import MarkdownTest from './pages/MarkdownTest';
+// 教师页面
+import TeacherDashboard from './pages/teacher/TeacherDashboard';
+import TeacherStudents from './pages/teacher/TeacherStudents';
+import ExerciseStatsPage from './pages/teacher/ExerciseStats';
+
+// 家长页面
+import ParentDashboard from './pages/parent/ParentDashboard';
+import ParentStudents from './pages/parent/ParentStudents';
+import ParentAnalytics from './pages/parent/ParentAnalytics';
+
+// 管理员页面
+import AdminDashboard from './pages/admin/AdminDashboard';
+import StudentProgress from './pages/common/StudentProgress';
+import MessagesPage from './pages/Messages';
+import AgentWidget from './components/agent/AgentWidget'; // 1. 导入组件
 
 const queryClient = new QueryClient();
 
@@ -31,12 +46,19 @@ const DefaultRedirect = () => {
   return <Navigate to={getDefaultRoute(user?.role)} replace />;
 };
 
+// 2. 创建一个包装组件，用于根据认证状态显示挂件
+const AppAgentWidget = () => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <AgentWidget /> : null;
+};
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
         <AuthProvider>
         <Toaster position="top-right" />  {/* 添加这一行 */}
+        <AppAgentWidget /> {/* 3. 在这里添加挂件 */}
           <Routes>
             {/* 公共路由 */}
             <Route path="/login" element={<Login />} />
@@ -73,6 +95,14 @@ const App = () => {
                   }
                 />
                 <Route
+                  path="wrong-book"
+                  element={
+                    <StudentRoute>
+                      <WrongBook />
+                    </StudentRoute>
+                  }
+                />
+                <Route
                   path="exercise/:id"
                   element={
                     <StudentRoute>
@@ -100,7 +130,30 @@ const App = () => {
                     </TeacherRoute>
                   }
                 />
-                {/* 其他教师路由... */}
+                <Route
+                  path="students"
+                  element={
+                    <TeacherRoute>
+                      <TeacherStudents />
+                    </TeacherRoute>
+                  }
+                />
+                <Route
+                  path="statistics"
+                  element={
+                    <TeacherRoute>
+                      <ExerciseStatsPage />
+                    </TeacherRoute>
+                  }
+                />
+                <Route
+                  path="students/:studentId/progress"
+                  element={
+                    <TeacherRoute>
+                      <StudentProgress />
+                    </TeacherRoute>
+                  }
+                />
               </Route>
 
               {/* 家长路由 */}
@@ -113,7 +166,42 @@ const App = () => {
                     </ParentRoute>
                   }
                 />
-                {/* 其他家长路由... */}
+                <Route
+                  path="students"
+                  element={
+                    <ParentRoute>
+                      <ParentStudents />
+                    </ParentRoute>
+                  }
+                />
+                <Route
+                  path="analytics"
+                  element={
+                    <ParentRoute>
+                      <ParentAnalytics />
+                    </ParentRoute>
+                  }
+                />
+                <Route
+                  path="students/:studentId/progress"
+                  element={
+                    <ParentRoute>
+                      <StudentProgress />
+                    </ParentRoute>
+                  }
+                />
+              </Route>
+
+              {/* 管理员路由 */}
+              <Route path="admin">
+                <Route
+                  path="dashboard"
+                  element={
+                    <AdminRoute>
+                      <AdminDashboard />
+                    </AdminRoute>
+                  }
+                />
               </Route>
 
               {/* 个人资料路由 */}
@@ -122,6 +210,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="messages"
+                element={
+                  <ProtectedRoute>
+                    <MessagesPage />
                   </ProtectedRoute>
                 }
               />

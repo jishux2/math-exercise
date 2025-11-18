@@ -19,6 +19,13 @@ const Profile = () => {
     return labels[role];
   };
 
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString();
+  };
+
   return (
     <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
@@ -69,7 +76,7 @@ const Profile = () => {
             <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">注册时间</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {new Date(user.created_at).toLocaleDateString()}
+                {formatDate(user.created_at)}
               </dd>
             </div>
           </dl>

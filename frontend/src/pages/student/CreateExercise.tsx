@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { exercises } from '../../api';
+import toast from 'react-hot-toast';
 
 const CreateExercise = () => {
   const navigate = useNavigate();
@@ -27,12 +28,12 @@ const CreateExercise = () => {
       const exercise = await exercises.create(formData);
       navigate(`/student/exercise/${exercise.id}`);  // 添加/student前缀
     } catch (err: any) {
-      setError(
-        err.response?.data?.detail?.[0]?.msg || 
-        err.response?.data?.detail || 
-        err.message || 
-        '创建练习失败，请重试'
-      );
+      const detail = err?.response?.data?.detail || err?.response?.data?.message || err?.message;
+      const friendly = typeof detail === 'string' && detail.includes('无法生成合适的操作数')
+        ? '生成题目失败：请调整难度、运算符或数值范围后重试'
+        : (detail || '创建练习失败，请重试');
+      setError(friendly);
+      toast.error(friendly);
       setIsLoading(false);
     }
   };
@@ -91,6 +92,41 @@ const CreateExercise = () => {
               </label>
             ))}
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            数值范围
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">最小值</label>
+              <input
+                type="number"
+                value={formData.number_range[0]}
+                onChange={(e) => {
+                  const min = Number.isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value);
+                  const [, max] = formData.number_range as [number, number];
+                  setFormData({ ...formData, number_range: [min, max] });
+                }}
+                className="w-full p-2 border rounded shadow-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">最大值</label>
+              <input
+                type="number"
+                value={formData.number_range[1]}
+                onChange={(e) => {
+                  const max = Number.isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value);
+                  const [min] = formData.number_range as [number, number];
+                  setFormData({ ...formData, number_range: [min, max] });
+                }}
+                className="w-full p-2 border rounded shadow-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-gray-500">提示：最小值需小于最大值，建议根据难度选择合理范围。</p>
         </div>
 
         <div>

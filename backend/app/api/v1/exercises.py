@@ -21,12 +21,20 @@ def create_exercise(
     exercise_in: schemas.ExerciseCreate,
     current_user: User = Depends(check_student)
 ) -> Any:
-    """创建新练习"""
+    """创建新练习
+
+    说明：当题目生成器在当前参数下无法生成有效题目（例如数值范围过窄、运算符组合受限），
+    将抛出ValueError。这里捕获并返回400，便于前端给出友好提示。
+    """
     exercise_service = ExerciseService(db)
-    return exercise_service.create_exercise(
-        student_id=current_user.student.id,
-        exercise_in=exercise_in
-    )
+    try:
+        return exercise_service.create_exercise(
+            student_id=current_user.student.id,
+            exercise_in=exercise_in
+        )
+    except ValueError as e:
+        # 常见信息："无法生成合适的操作数" / 其他参数校验相关错误
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/list", response_model=schemas.ExerciseListResponse)
 async def list_exercises(
@@ -59,7 +67,54 @@ def get_exercise_stats(
     exercise_service = ExerciseService(db)
     return exercise_service.get_student_exercise_stats(current_user.student.id)
 
-# 初始化AI服务的路由改为异步
+@router.get("/wrong-questions", response_model=schemas.WrongQuestionListResponse)
+def list_wrong_questions(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_student)
+) -> Any:
+    """获取当前学生的错题列表（分页）"""
+    exercise_service = ExerciseService(db)
+    items, total = exercise_service.get_student_wrong_questions(
+        student_id=current_user.student.id,
+        skip=skip,
+        limit=limit,
+    )
+    return {
+        "items": items,
+        "total": total,
+        "page": skip // limit + 1,
+        "page_size": limit,
+    }
+
+@router.get("/wrong-stats", response_model=schemas.WrongStats)
+def get_wrong_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_student)
+) -> Any:
+    """获取当前学生的错题统计信息"""
+    exercise_service = ExerciseService(db)
+    return exercise_service.get_student_wrong_stats(current_user.student.id)
+
+@router.post("/repractice/wrong-questions", response_model=schemas.ExerciseResponse)
+def repractice_wrong_questions(
+    req: schemas.RepracticeFromWrongsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_student)
+) -> Any:
+    """基于选中的错题创建新的练习（克隆题目内容）"""
+    exercise_service = ExerciseService(db)
+    try:
+        new_ex = exercise_service.create_exercise_from_wrong_questions(
+            student_id=current_user.student.id,
+            question_ids=req.question_ids,
+            shuffle=req.shuffle,
+        )
+        return new_ex
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.post("/ai/initialize")
 async def initialize_ai(
     *,
