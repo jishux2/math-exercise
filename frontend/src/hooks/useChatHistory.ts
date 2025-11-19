@@ -95,14 +95,13 @@ export const useChatHistory = () => {
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
 
-  // 添加消息到当前对话
+  // --- 核心改动 1：改造 addMessage ---
   const addMessage = useCallback((message: ChatMessage) => {
     if (!activeConversationId) return;
 
     setConversations(prev => {
       const newConversations = prev.map(c => {
         if (c.id === activeConversationId) {
-          // 如果是新对话的第一条用户消息，用它来命名
           const isNewChat = c.title === '新的对话' && c.messages.length === 0 && message.role === 'user';
           const newTitle = isNewChat ? message.content.substring(0, 20) : c.title;
 
@@ -137,6 +136,25 @@ export const useChatHistory = () => {
     });
   }, [activeConversationId, saveConversations]);
 
+  // --- 核心改动 2：改造 updateMessage ---
+  // 让它不再需要索引，而是直接更新最后一条消息
+  const updateLastMessage = useCallback((newContent: string) => {
+    if (!activeConversationId) return;
+
+    setConversations(prev => {
+      const newConversations = prev.map(c => {
+        if (c.id === activeConversationId && c.messages.length > 0) {
+          const newMessages = [...c.messages];
+          newMessages[newMessages.length - 1].content = newContent;
+          return { ...c, messages: newMessages };
+        }
+        return c;
+      });
+      saveConversations(newConversations);
+      return newConversations;
+    });
+  }, [activeConversationId, saveConversations]);
+
   // 删除消息
   const deleteMessage = useCallback((messageIndex: number) => {
     if (!activeConversationId) return;
@@ -163,7 +181,8 @@ export const useChatHistory = () => {
     deleteConversation,
     renameConversation,
     addMessage,
-    updateMessage,
+    updateLastMessage, // 导出新函数
+    updateMessage: updateMessage, // 保留旧的 updateMessage (虽然现在没用，但为了兼容性)
     deleteMessage,
   };
 };

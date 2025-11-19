@@ -17,7 +17,8 @@ class ChatRequest(BaseModel):
     """对话请求"""
     message: str
     chat_history: Optional[List[dict]] = None
-    bot_name: str = "chinchilla"
+    # --- 字段名修改 ---
+    bot_handle: str = "GPT-3.5-Turbo" # 默认使用 Assistant
 
 
 class ChatResponse(BaseModel):
@@ -25,8 +26,13 @@ class ChatResponse(BaseModel):
     response: str
     success: bool = True
 
+# --- 定义新的响应模型 ---
+class AgentChatResponse(BaseModel):
+    response: str
+    new_title: Optional[str] = None
 
-@router.post("/chat", response_model=ChatResponse)
+
+@router.post("/chat", response_model=AgentChatResponse) # 使用新的响应模型
 async def chat_with_agent(
     *,
     db: Session = Depends(get_db),
@@ -59,7 +65,7 @@ async def chat_with_agent(
     )
     
     # 初始化智能体
-    success = await agent_service.initialize(bot_name=request.bot_name)
+    success = await agent_service.initialize(bot_handle=request.bot_handle)
     if not success:
         raise HTTPException(
             status_code=500,
@@ -68,11 +74,14 @@ async def chat_with_agent(
     
     # 执行对话
     try:
-        response = await agent_service.chat(
+        # chat 方法现在返回一个字典
+        result_dict = await agent_service.chat(
             message=request.message,
             chat_history=request.chat_history
         )
-        return ChatResponse(response=response)
+        print(f"result_dict: {result_dict}")
+        # 直接返回这个字典，FastAPI 会自动序列化
+        return result_dict
     
     except Exception as e:
         # 打印完整错误堆栈便于调试
@@ -109,7 +118,7 @@ async def chat_with_agent_stream(
         poe_client=ai_service.poe_client
     )
     
-    success = await agent_service.initialize(bot_name=request.bot_name)
+    success = await agent_service.initialize(bot_handle=request.bot_handle)
     if not success:
         raise HTTPException(
             status_code=500,

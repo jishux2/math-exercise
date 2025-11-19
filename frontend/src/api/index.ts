@@ -244,6 +244,18 @@ export const ai = {
     return response.data;
   },
 
+  // --- 新增方法 ---
+  getStatus: async (): Promise<{ is_initialized: boolean }> => {
+    // 注意：这里我们用 /bots/status 端点
+    const response = await api.get('/bots/status');
+    return response.data;
+  },
+
+  getPoints: async (): Promise<{ points: number | null; error?: string }> => {
+    const response = await api.get('/bots/points');
+    return response.data;
+  },
+
   getFeedback: async (
     exerciseId: number,
     feedbackType: 'detailed' | 'summary' = 'detailed',
@@ -307,6 +319,22 @@ export const ai = {
 };
 
 
+// 新增 bots 对象
+export const bots = {
+  getList: async (count: number = 20): Promise<any[]> => {
+    const response = await api.get('/bots/list', { params: { count } });
+    return response.data;
+  },
+};
+
+
+// 定义返回类型
+interface AgentResponse {
+  response: string;
+  new_title?: string;
+}
+
+
 export const agent = {
   // 删掉原来的 chatStream 函数
   
@@ -315,14 +343,13 @@ export const agent = {
     payload: {
       message: string;
       chat_history?: { role: string; content: string }[];
-      bot_name?: string;
+      bot_handle?: string;
     },
     signal: AbortSignal
-  ): Promise<string> => {
+  ): Promise<AgentResponse> => { // 返回值是 AgentResponse
     try {
       const response = await api.post('/agent/chat', payload, { signal });
-      // 后端返回的数据结构是 { "response": "..." }
-      return response.data.response;
+      return response.data; // 直接返回后端给的完整对象
     } catch (error) {
       // Axios 会自动处理错误，这里让它继续抛出
       throw error;

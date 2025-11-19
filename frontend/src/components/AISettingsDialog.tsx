@@ -10,7 +10,7 @@ interface AISettingsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (tokens: { pb_token: string; plat_token: string }) => Promise<void>;
-  buttonRef: React.RefObject<HTMLDivElement | null>;
+  buttonRef: React.RefObject<HTMLElement | null>;
 }
 
 const AISettingsDialog: FC<AISettingsDialogProps> = ({ 

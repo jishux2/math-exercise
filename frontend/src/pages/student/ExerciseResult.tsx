@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react'; // 1. 引入 useRef
 import { useParams, useNavigate, useLocation } from 'react-router-dom';  // 添加useLocation
 import { exercises, ai } from '../../api';
 import AIFeedbackPreview from '../../components/AIFeedbackPreview';
@@ -41,11 +41,17 @@ const ExerciseResult = () => {
   const [aiFeedback, setAIFeedback] = useState<string>('');
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
+  // 2. 创建一个 ref 来跟踪生成状态，避免 getFeedback 依赖 state
+  const isGeneratingRef = useRef(false);
+
+  // 3. 改造 getFeedback 函数
   const getFeedback = useCallback(async (exerciseId: number) => {
-    if (isGeneratingFeedback) return;
+    // 使用 ref 来防止重复触发
+    if (isGeneratingRef.current) return;
+    isGeneratingRef.current = true;
     
     setIsGeneratingFeedback(true);
-    setAiFeedbackError(null);  // 清除之前的AI反馈错误
+    setAiFeedbackError(null);
     let feedback = '';
 
     try {
@@ -54,7 +60,8 @@ const ExerciseResult = () => {
         'detailed',
         (chunk) => {
           feedback += chunk;
-          setAIFeedback(feedback);
+          // 直接使用 setState 的函数形式，这样就不需要依赖 aiFeedback state
+          setAIFeedback(prev => prev + chunk); 
         },
         (error) => {
           console.log('Error occurred:', error); // 添加调试日志
@@ -64,8 +71,9 @@ const ExerciseResult = () => {
       );
     } finally {
       setIsGeneratingFeedback(false);
+      isGeneratingRef.current = false;
     }
-  }, [isGeneratingFeedback]);
+  }, []); // 4. 移除所有依赖项，让这个函数永远稳定
 
   // 加载练习数据和处理AI反馈
   useEffect(() => {
@@ -89,6 +97,7 @@ const ExerciseResult = () => {
         if (data.ai_feedback) {
           setAIFeedback(data.ai_feedback);
         } else if (shouldGenerateAI) {
+          // 5. 直接调用稳定的 getFeedback 函数
           getFeedback(parseInt(id));
         }
       } catch (error) {

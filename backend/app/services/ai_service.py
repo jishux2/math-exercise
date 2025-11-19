@@ -1,6 +1,6 @@
 # app/services/ai_service.py
 
-from typing import Optional, Dict, AsyncGenerator
+from typing import Optional, Dict, AsyncGenerator, Any
 from datetime import datetime
 import asyncio
 
@@ -68,6 +68,19 @@ class AIService:
         available = self.poe_client is not None
         print(f"AI服务状态: {'可用' if available else '不可用'}")  # 添加调试信息
         return available
+
+    async def get_account_info(self) -> Optional[Dict[str, Any]]:
+        if not self.is_available():
+            return None
+        try:
+            settings = await self.poe_client.get_settings()
+            return {
+                "subscription_active": settings.get("subscription", {}).get("isActive", False),
+                "message_points": settings.get("messagePointInfo", {}).get("messagePointBalance", 0)
+            }
+        except Exception as e:
+            print(f"获取Poe账户信息失败: {str(e)}")
+            return None
 
     def cancel_generation(self):
         """标记取消生成"""

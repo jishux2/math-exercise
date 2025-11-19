@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from . import auth, users, exercises, admin, messages, agent
+from . import auth, users, exercises, admin, messages, agent, bots # 1. 导入 bots
 
 api_router = APIRouter()
 
@@ -9,4 +9,4 @@ api_router.include_router(exercises.router, prefix="/exercises", tags=["exercise
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(messages.router, tags=["messages"])
 api_router.include_router(agent.router, prefix="/agent", tags=["agent"])  # 新增
-# 已移除智能体(Agent)相关路由
+api_router.include_router(bots.router, prefix="/bots", tags=["bots"]) # 2. 注册新路由

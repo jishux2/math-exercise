@@ -3,12 +3,15 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth, getDefaultRoute } from './contexts/AuthContext';
+import { AIProvider } from './contexts/AIContext'; // 1. 导入 AIProvider
 import ProtectedRoute, { 
   StudentRoute, 
   TeacherRoute, 
   ParentRoute, 
   AdminRoute 
 } from './components/auth/ProtectedRoute';  // 添加 ProtectedRoute
+import { UserRole } from './api/types';
+import AppInitializer from './components/AppInitializer'; // 1. 导入“项目经理”
 
 // 页面组件
 import Layout from './components/layout/Layout';
@@ -48,185 +51,190 @@ const DefaultRedirect = () => {
 
 // 2. 创建一个包装组件，用于根据认证状态显示挂件
 const AppAgentWidget = () => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <AgentWidget /> : null;
+  const { isAuthenticated, user } = useAuth();
+  const isStudent = user?.role === UserRole.STUDENT;
+  return isAuthenticated && isStudent ? <AgentWidget /> : null;
 };
 
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <AuthProvider>
-        <Toaster position="top-right" />  {/* 添加这一行 */}
-        <AppAgentWidget /> {/* 3. 在这里添加挂件 */}
-          <Routes>
-            {/* 公共路由 */}
-            <Route path="/login" element={<Login />} />
+        <AIProvider> {/* 2. 用 AIProvider 包裹 */}
+          <AuthProvider>
+            <AppInitializer>
+              <Toaster position="top-right" />  {/* 添加这一行 */}
+              <AppAgentWidget /> {/* 3. 在这里添加挂件 */}
+              <Routes>
+                {/* 公共路由 */}
+                <Route path="/login" element={<Login />} />
 
-            {/* 需要认证的路由 */}
-            <Route element={<Layout />}>
-              {/* 根路径重定向 */}
-              <Route index element={<DefaultRedirect />} />
+                {/* 需要认证的路由 */}
+                <Route element={<Layout />}>
+                  {/* 根路径重定向 */}
+                  <Route index element={<DefaultRedirect />} />
 
-              {/* 学生路由 */}
-              <Route path="student">
-                <Route
-                  path="create-exercise"
-                  element={
-                    <StudentRoute>
-                      <CreateExercise />
-                    </StudentRoute>
-                  }
-                />
-                <Route
-                  path="exercise-history"
-                  element={
-                    <StudentRoute>
-                      <ExerciseHistory />
-                    </StudentRoute>
-                  }
-                />
-                <Route
-                  path="my-scores"
-                  element={
-                    <StudentRoute>
-                      <MyScores />
-                    </StudentRoute>
-                  }
-                />
-                <Route
-                  path="wrong-book"
-                  element={
-                    <StudentRoute>
-                      <WrongBook />
-                    </StudentRoute>
-                  }
-                />
-                <Route
-                  path="exercise/:id"
-                  element={
-                    <StudentRoute>
-                      <Exercise />
-                    </StudentRoute>
-                  }
-                />
-                <Route
-                  path="result/:id"
-                  element={
-                    <StudentRoute>
-                      <ExerciseResult />
-                    </StudentRoute>
-                  }
-                />
-              </Route>
+                  {/* 学生路由 */}
+                  <Route path="student">
+                    <Route
+                      path="create-exercise"
+                      element={
+                        <StudentRoute>
+                          <CreateExercise />
+                        </StudentRoute>
+                      }
+                    />
+                    <Route
+                      path="exercise-history"
+                      element={
+                        <StudentRoute>
+                          <ExerciseHistory />
+                        </StudentRoute>
+                      }
+                    />
+                    <Route
+                      path="my-scores"
+                      element={
+                        <StudentRoute>
+                          <MyScores />
+                        </StudentRoute>
+                      }
+                    />
+                    <Route
+                      path="wrong-book"
+                      element={
+                        <StudentRoute>
+                          <WrongBook />
+                        </StudentRoute>
+                      }
+                    />
+                    <Route
+                      path="exercise/:id"
+                      element={
+                        <StudentRoute>
+                          <Exercise />
+                        </StudentRoute>
+                      }
+                    />
+                    <Route
+                      path="result/:id"
+                      element={
+                        <StudentRoute>
+                          <ExerciseResult />
+                        </StudentRoute>
+                      }
+                    />
+                  </Route>
 
-              {/* 教师路由 */}
-              <Route path="teacher">
-                <Route
-                  path="dashboard"
-                  element={
-                    <TeacherRoute>
-                      <TeacherDashboard />
-                    </TeacherRoute>
-                  }
-                />
-                <Route
-                  path="students"
-                  element={
-                    <TeacherRoute>
-                      <TeacherStudents />
-                    </TeacherRoute>
-                  }
-                />
-                <Route
-                  path="statistics"
-                  element={
-                    <TeacherRoute>
-                      <ExerciseStatsPage />
-                    </TeacherRoute>
-                  }
-                />
-                <Route
-                  path="students/:studentId/progress"
-                  element={
-                    <TeacherRoute>
-                      <StudentProgress />
-                    </TeacherRoute>
-                  }
-                />
-              </Route>
+                  {/* 教师路由 */}
+                  <Route path="teacher">
+                    <Route
+                      path="dashboard"
+                      element={
+                        <TeacherRoute>
+                          <TeacherDashboard />
+                        </TeacherRoute>
+                      }
+                    />
+                    <Route
+                      path="students"
+                      element={
+                        <TeacherRoute>
+                          <TeacherStudents />
+                        </TeacherRoute>
+                      }
+                    />
+                    <Route
+                      path="statistics"
+                      element={
+                        <TeacherRoute>
+                          <ExerciseStatsPage />
+                        </TeacherRoute>
+                      }
+                    />
+                    <Route
+                      path="students/:studentId/progress"
+                      element={
+                        <TeacherRoute>
+                          <StudentProgress />
+                        </TeacherRoute>
+                      }
+                    />
+                  </Route>
 
-              {/* 家长路由 */}
-              <Route path="parent">
-                <Route
-                  path="dashboard"
-                  element={
-                    <ParentRoute>
-                      <ParentDashboard />
-                    </ParentRoute>
-                  }
-                />
-                <Route
-                  path="students"
-                  element={
-                    <ParentRoute>
-                      <ParentStudents />
-                    </ParentRoute>
-                  }
-                />
-                <Route
-                  path="analytics"
-                  element={
-                    <ParentRoute>
-                      <ParentAnalytics />
-                    </ParentRoute>
-                  }
-                />
-                <Route
-                  path="students/:studentId/progress"
-                  element={
-                    <ParentRoute>
-                      <StudentProgress />
-                    </ParentRoute>
-                  }
-                />
-              </Route>
+                  {/* 家长路由 */}
+                  <Route path="parent">
+                    <Route
+                      path="dashboard"
+                      element={
+                        <ParentRoute>
+                          <ParentDashboard />
+                        </ParentRoute>
+                      }
+                    />
+                    <Route
+                      path="students"
+                      element={
+                        <ParentRoute>
+                          <ParentStudents />
+                        </ParentRoute>
+                      }
+                    />
+                    <Route
+                      path="analytics"
+                      element={
+                        <ParentRoute>
+                          <ParentAnalytics />
+                        </ParentRoute>
+                      }
+                    />
+                    <Route
+                      path="students/:studentId/progress"
+                      element={
+                        <ParentRoute>
+                          <StudentProgress />
+                        </ParentRoute>
+                      }
+                    />
+                  </Route>
 
-              {/* 管理员路由 */}
-              <Route path="admin">
-                <Route
-                  path="dashboard"
-                  element={
-                    <AdminRoute>
-                      <AdminDashboard />
-                    </AdminRoute>
-                  }
-                />
-              </Route>
+                  {/* 管理员路由 */}
+                  <Route path="admin">
+                    <Route
+                      path="dashboard"
+                      element={
+                        <AdminRoute>
+                          <AdminDashboard />
+                        </AdminRoute>
+                      }
+                    />
+                  </Route>
 
-              {/* 个人资料路由 */}
-              <Route
-                path="profile"
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="messages"
-                element={
-                  <ProtectedRoute>
-                    <MessagesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/markdown-test" element={<MarkdownTest />} />
-              {/* 通配符路由重定向 */}
-              <Route path="*" element={<DefaultRedirect />} />
-            </Route>
-          </Routes>
-        </AuthProvider>
+                  {/* 个人资料路由 */}
+                  <Route
+                    path="profile"
+                    element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="messages"
+                    element={
+                      <ProtectedRoute>
+                        <MessagesPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="/markdown-test" element={<MarkdownTest />} />
+                  {/* 通配符路由重定向 */}
+                  <Route path="*" element={<DefaultRedirect />} />
+                </Route>
+              </Routes>
+            </AppInitializer>
+          </AuthProvider>
+        </AIProvider>
       </Router>
     </QueryClientProvider>
   );

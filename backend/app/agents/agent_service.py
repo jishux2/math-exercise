@@ -32,12 +32,12 @@ class AgentService:
         self.chat_model: Optional[PoeChatModel] = None
         self.agent_executor: Optional[AgentExecutor] = None
     
-    async def initialize(self, bot_name: str = "chinchilla") -> bool:
+    async def initialize(self, bot_handle: str = "GPT-3.5-Turbo") -> bool:
         """
         初始化智能体
         
         参数：
-            bot_name: 使用的Poe机器人名称
+            bot_handle: 使用的Poe机器人句柄 (handle)
             
         返回：
             是否初始化成功
@@ -45,10 +45,14 @@ class AgentService:
         if not self.poe_client:
             return False
         
+        # --- 核心改动：在这里进行 handle -> model 的转换 ---
+        bot_name = await self.poe_client.get_model_by_handle(bot_handle)
+        print(f"智能体初始化：handle='{bot_handle}' -> model='{bot_name}'")
+
         # 创建聊天模型
         self.chat_model = PoeChatModel(
             poe_client=self.poe_client,
-            bot_name=bot_name
+            bot_name=bot_name # 使用转换后的 model 名称
         )
         
         # 创建工具列表
@@ -209,7 +213,7 @@ Question: {{input}}
         self,
         message: str,
         chat_history: Optional[List[Dict[str, str]]] = None
-    ) -> str:
+    ) -> Dict[str, Any]: # 返回值从 str 变为 Dict
         """
         与智能体对话
         
@@ -241,13 +245,20 @@ Question: {{input}}
         # 执行智能体推理
         result = await self.agent_executor.ainvoke(agent_input)
         
+        # --- 从 chat_model 实例中获取捕获到的标题 ---
+        new_title = self.chat_model.captured_title
+        print(f"当前标题: {new_title}")
+        
         # 推理完成后重置对话状态，下次用户提问将创建新的Poe会话
         # 这样每个问题对应一个独立会话，便于调试，同时单次对话内部
         # 仍使用增量模式享受prompt caching收益
         if self.chat_model:
             self.chat_model.reset_conversation()
         
-        return result["output"]
+        return {
+            "response": result["output"],
+            "new_title": new_title
+        }
     
     async def chat_stream(
         self,

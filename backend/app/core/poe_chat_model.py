@@ -33,6 +33,9 @@ class PoeChatModel(BaseChatModel):
     # 待处理的截断信息：(message_id, truncated_text)
     pending_truncation: Optional[tuple[int, str]] = None
     
+    # --- 新增一个属性来暂存标题 ---
+    captured_title: Optional[str] = None
+
     class Config:
         arbitrary_types_allowed = True
     
@@ -256,7 +259,14 @@ class PoeChatModel(BaseChatModel):
                 # 更新文本累计值，为下一轮检测做准备
                 accumulated_text = current_full_text
             
-            print(f"标题: {chunk['title']}")
+
+            # --- 核心修复点：使用最简洁、最正确的逻辑 ---
+            # 检查条件：1. 这个对话的标题还没有被捕获过  2. 确实收到了响应 (chunk 存在)
+            if not self.captured_title and chunk:
+                new_title = chunk.get("title")
+                if new_title:
+                    self.captured_title = new_title
+                    print(f"成功捕获新对话标题: {self.captured_title}")
             # 生成完成后，如果需要截断，保存待处理信息
             # 实际编辑会在下一轮发送消息前执行，此时WebSocket推送已稳定
             if should_truncate and ai_message_id:
@@ -277,4 +287,6 @@ class PoeChatModel(BaseChatModel):
         self.chat_code = None
         self.chat_id = None
         self.pending_truncation = None  # 清除待处理的截断信息
+        # 确保在重置对话时，也清空已捕获的标题
+        self.captured_title = None
         print("对话状态已重置，下次将创建新会话")

@@ -1,23 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';  // 添加useRef
+// src/pages/student/Exercise.tsx
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { exercises, ai } from '../../api';
-import AISettingsDialog from '../../components/AISettingsDialog';
-import AIControl from '../../components/AIControl';
-import toast from 'react-hot-toast';
+import { exercises } from '../../api';
+import { useAI } from '../../contexts/AIContext';
+import { Sparkles, HelpCircle } from 'lucide-react'; // 引入新图标
 
 const Exercise = () => {
-  const aiButtonRef = useRef<HTMLDivElement>(null);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAIInitialized } = useAI(); // 只获取全局状态
+
   const [exercise, setExercise] = useState<any>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answer, setAnswer] = useState('');
   const [startTime, setStartTime] = useState<number>(0);
-  
-  // AI相关状态
-  const [isAIEnabled, setIsAIEnabled] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isAILoading, setIsAILoading] = useState(false);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -64,40 +60,11 @@ const Exercise = () => {
         // 完成练习
         await exercises.complete(exercise.id);
         navigate(`/student/result/${exercise.id}`, {
-          state: { shouldGenerateAI: isAIEnabled }
+          state: { shouldGenerateAI: isAIInitialized } // 如果AI已初始化，就去生成
         });
       }
     } catch (error) {
       console.error('Failed to submit answer:', error);
-    }
-  };
-
-  // AI相关函数
-  const handleAIToggle = () => {
-    if (!isAIEnabled) {
-      setIsSettingsOpen(true);
-    } else {
-      setIsAIEnabled(false);
-    }
-  };
-
-  const handleSettingsSubmit = async (tokens: { pb_token: string; plat_token: string }) => {
-    setIsAILoading(true);
-    try {
-      const result = await ai.initialize(tokens);
-      if (result.success) {
-        setIsAIEnabled(true);
-        // 不需要在这里设置setIsSettingsOpen(false)了，因为对话框会自动关闭
-        return; // 成功时返回
-      } else {
-        throw new Error('AI服务初始化失败');
-      }
-    } catch (error) {
-      console.error('Failed to initialize AI:', error);
-      toast.error('AI服务初始化失败，请稍后重试');
-      throw error; // 抛出错误，这样对话框不会关闭
-    } finally {
-      setIsAILoading(false);
     }
   };
 
@@ -107,17 +74,30 @@ const Exercise = () => {
 
   return (
     <div className="max-w-2xl mx-auto p-6">
-      {/* AI控制按钮 */}
       <div className="flex justify-between items-center mb-6">
         <div className="text-lg font-semibold">
           题目 {currentQuestionIndex + 1} / {exercise.questions.length}
         </div>
-        <div ref={aiButtonRef}>  {/* 在这里添加ref */}
-          <AIControl
-            enabled={isAIEnabled}
-            loading={isAILoading}
-            onToggle={handleAIToggle}
-          />
+        
+        {/* --- 优雅的提示信息 --- */}
+        <div className="relative group">
+          {isAIInitialized ? (
+            <div className="flex items-center gap-1.5 text-sm text-green-600">
+              <Sparkles className="w-4 h-4" />
+              <span>AI点评已启用</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-sm text-gray-400">
+              <HelpCircle className="w-4 h-4" />
+              <span>AI点评不可用</span>
+            </div>
+          )}
+          <div className="absolute bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-800 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            {isAIInitialized 
+              ? "完成练习后将自动生成AI点评。" 
+              : "请点击右下角AI助手图标，在侧边栏配置AI服务以启用点评功能。"
+            }
+          </div>
         </div>
       </div>
 
@@ -143,14 +123,6 @@ const Exercise = () => {
           提交答案
         </button>
       </div>
-
-      {/* AI设置对话框 */}
-      <AISettingsDialog
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onSubmit={handleSettingsSubmit}
-        buttonRef={aiButtonRef}
-      />
     </div>
   );
 };
