@@ -17,3 +17,8 @@ temp.*
 poe_api_wrapper/
 
 .VSCodeCounter/
+
+# Project documentation
+midterm-report.*
+prompt.md
+proposal.md

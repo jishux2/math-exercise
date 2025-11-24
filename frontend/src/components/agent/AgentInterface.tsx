@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { useChatHistory, ChatMessage } from '../../hooks/useChatHistory';
 import { agent } from '../../api';
 
-import ConversationSidebar from './ConversationSidebar';
+import ConversationSidebar, { SidebarHandles } from './ConversationSidebar';
 import MessageActions from './MessageActions';
 import TypingIndicator from './TypingIndicator';
 import BotSelector from './BotSelector'; // 1. 导入新组件
@@ -107,6 +107,9 @@ const AgentInterface: React.FC<Props> = ({ onClose }) => {
     }
   }, [input]); // 每次输入变化时都重新计算
 
+  // 2. 创建一个 ref 来引用侧边栏实例
+  const sidebarRef = useRef<SidebarHandles>(null);
+
   const handleSend = async () => {
     if (!input.trim() || isLoading || !activeConversationId) return;
 
@@ -151,6 +154,10 @@ const AgentInterface: React.FC<Props> = ({ onClose }) => {
       }
     } finally {
       setIsLoading(false);
+      // --- 3. 对话结束后，触发积分更新 ---
+      if (sidebarRef.current) {
+        sidebarRef.current.triggerPointsUpdate();
+      }
     }
   };
   
@@ -184,14 +191,15 @@ const AgentInterface: React.FC<Props> = ({ onClose }) => {
         className="relative w-[880px] max-w-[100%] md:max-w-[90vw] h-[80vh] max-h-[720px] bg-white rounded-3xl shadow-2xl flex flex-row overflow-hidden border border-gray-200 select-none pointer-events-auto"
         ref={containerRef}
       >
-      <ConversationSidebar
-        conversations={conversations}
-        activeConversationId={activeConversationId}
-        onSelect={selectConversation}
-        onCreate={createNewConversation}
-        onDelete={deleteConversation}
-        widthPx={sidebarWidth}
-      />
+        <ConversationSidebar
+          ref={sidebarRef}
+          conversations={conversations}
+          activeConversationId={activeConversationId}
+          onSelect={selectConversation}
+          onCreate={createNewConversation}
+          onDelete={deleteConversation}
+          widthPx={sidebarWidth}
+        />
       {/* 分隔条（拖拽改变侧栏宽度） */}
       <div
         role="separator"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react'; // 1. 引入 forwardRef 和 useImperativeHandle
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, MessageSquareText, Trash2, Settings, BrainCircuit, Loader2 } from 'lucide-react';
 import { Conversation } from '../../hooks/useChatHistory';
@@ -18,30 +18,46 @@ interface Props {
   widthPx?: number;
 }
 
-const ConversationSidebar: React.FC<Props> = ({
+// --- 2. 定义暴露给父组件的 ref 类型 ---
+export interface SidebarHandles {
+  triggerPointsUpdate: () => Promise<void>;
+}
+
+const ConversationSidebar = forwardRef<SidebarHandles, Props>(({
   conversations,
   activeConversationId,
   onSelect,
   onCreate,
   onDelete,
   widthPx = 256,
-}) => {
+}, ref) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { isAIInitialized, checkAIStatus } = useAI();
   const [poePoints, setPoePoints] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // 用一个更明确的状态名
+  const [isPointsLoading, setIsPointsLoading] = useState(false); // 4. 新增加载状态
   
   // 2. 注意这里我们不再需要 settingsButtonRef 了，因为对话框由 AIControl 触发
   const controlRef = useRef<HTMLDivElement>(null);
 
+  // --- 5. 改造 updatePoints 函数 ---
   const updatePoints = async () => {
+    setIsPointsLoading(true); // 开始加载
     try {
       const data = await ai.getPoints();
       setPoePoints(data.points);
     } catch (error) {
       console.error("获取积分失败:", error);
+      setPoePoints(null); // 出错了就清空
+    } finally {
+      setIsPointsLoading(false); // 结束加载
     }
   };
+
+  // --- 6. 使用 useImperativeHandle 暴露方法 ---
+  useImperativeHandle(ref, () => ({
+    triggerPointsUpdate: updatePoints
+  }));
 
   // 初始加载时不再需要自己检查，但当全局状态变化时，需要更新积分
   useEffect(() => {
@@ -105,7 +121,10 @@ const ConversationSidebar: React.FC<Props> = ({
       <div className="p-3 border-t mt-auto space-y-3">
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span>Poe 积分</span>
-          {isAIInitialized && poePoints !== null ? (
+          {/* --- 7. 加入加载动画 --- */}
+          {isPointsLoading ? (
+            <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
+          ) : isAIInitialized && poePoints !== null ? (
             <span className="font-semibold text-gray-700 flex items-center gap-1">
               <BrainCircuit className="w-3 h-3 text-green-500" /> {poePoints}
             </span>
@@ -132,6 +151,6 @@ const ConversationSidebar: React.FC<Props> = ({
       />
     </div>
   );
-};
+}); // --- 8. 闭合 forwardRef ---
 
 export default ConversationSidebar;
